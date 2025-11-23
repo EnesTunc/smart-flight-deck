@@ -50,14 +50,48 @@ class CommandParser:
         (r"strobes? (on|off)", "strobe_lights_toggle", {}),
         (r"beacon (on|off)", "beacon_lights_toggle", {}),
         (r"nav(igation)? lights? (on|off)", "nav_lights_toggle", {}),
+        (r"taxi lights? (on|off)", "taxi_lights_toggle", {}),
         # Parking brake
         (r"parking brake", "parking_brake_toggle", {}),
         (r"(set|release) (parking )?brake", "parking_brake_toggle", {}),
-        # Spoilers
+        # Spoilers / Speedbrake
         (r"spoilers? arm(ed)?", "spoilers_arm", {}),
         (r"arm (the )?spoilers?", "spoilers_arm", {}),
         (r"spoilers? (on|extend|deploy)", "spoilers_on", {}),
         (r"spoilers? (off|retract)", "spoilers_off", {}),
+        (r"speed ?brake (on|extend|deploy)", "spoilers_on", {}),
+        (r"speed ?brake (off|retract)", "spoilers_off", {}),
+        # Autobrake
+        (r"auto ?brake (off|disarm)", "autobrake_off", {}),
+        (r"auto ?brake (low|lo|1|one)", "autobrake_lo", {}),
+        (r"auto ?brake (med|medium|2|two)", "autobrake_med", {}),
+        (r"auto ?brake (high|hi|3|three)", "autobrake_hi", {}),
+        (r"auto ?brake (max|maximum|4|four)", "autobrake_max", {}),
+        (r"auto ?brake (rto|rejected)", "autobrake_rto", {}),
+        # Trim
+        (r"trim (nose )?up", "elevator_trim_up", {}),
+        (r"trim (nose )?down", "elevator_trim_down", {}),
+        (r"(aileron |roll )?trim left", "aileron_trim_left", {}),
+        (r"(aileron |roll )?trim right", "aileron_trim_right", {}),
+        (r"rudder trim left", "rudder_trim_left", {}),
+        (r"rudder trim right", "rudder_trim_right", {}),
+        # APU
+        (r"apu (start|on)", "apu_start", {}),
+        (r"(start|turn on) (the )?apu", "apu_start", {}),
+        (r"apu (stop|off|shutdown)", "apu_off", {}),
+        (r"(stop|turn off|shutdown) (the )?apu", "apu_off", {}),
+        # Engines
+        (r"(start|ignite) engine(s)?( all)?", "engines_start", {}),
+        (r"engine(s)? start", "engines_start", {}),
+        (r"(shutdown|stop|cut) engine(s)?( all)?", "engines_off", {}),
+        (r"engine(s)? (off|shutdown|stop|cut)", "engines_off", {}),
+        (r"(start|ignite) engine (one|1|left)", "engine1_start", {}),
+        (r"(start|ignite) engine (two|2|right)", "engine2_start", {}),
+        # Transponder
+        (r"transponder (standby|stby)", "xpndr_standby", {}),
+        (r"(squawk |transponder )?(ident|id)", "xpndr_ident", {}),
+        (r"transponder (on|alt|altitude)", "xpndr_on", {}),
+        (r"squawk (\\d{4})", "xpndr_set", {"code": "group1"}),
         # Autopilot
         (r"autopilot (on|off|engage|disengage)", "ap_master", {}),
         (r"(engage|disengage) autopilot", "ap_master", {}),
@@ -65,6 +99,21 @@ class CommandParser:
         (r"altitude (hold|mode)", "ap_altitude_hold", {}),
         (r"nav (hold|mode)", "ap_nav_hold", {}),
         (r"approach (mode)?", "ap_approach", {}),
+        (r"vertical speed (mode)?", "ap_vs_hold", {}),
+        (r"v s (mode)?", "ap_vs_hold", {}),
+        (r"flight level change", "ap_flc", {}),
+        (r"speed (hold|mode)", "ap_speed_hold", {}),
+        # Radio/Comms
+        (r"(swap|flip|switch) com( ?(one|1))?", "com1_swap", {}),
+        (r"(swap|flip|switch) com ?(two|2)", "com2_swap", {}),
+        (r"(swap|flip|switch) nav( ?(one|1))?", "nav1_swap", {}),
+        (r"(swap|flip|switch) nav ?(two|2)", "nav2_swap", {}),
+        # Cabin/Doors
+        (r"(open|close) (main |passenger )?door", "toggle_door", {}),
+        (r"(exit|door) (one|1|left)", "toggle_door1", {}),
+        (r"(exit|door) (two|2|right)", "toggle_door2", {}),
+        (r"(fasten )?seat ?belt(s)? (sign )?(on|off)", "seatbelt_sign", {}),
+        (r"no smoking (sign )?(on|off)", "no_smoking_sign", {}),
         # Status queries
         (r"(what('?s| is) (the |my |our )?)?(current )?speed", "query_speed", {}),
         (r"(what('?s| is) (the |my |our )?)?(current )?altitude", "query_altitude", {}),
