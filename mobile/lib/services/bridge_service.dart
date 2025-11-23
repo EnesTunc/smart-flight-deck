@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -17,10 +16,10 @@ class BridgeService {
   String? _baseUrl;
 
   final _simDataController = StreamController<SimData>.broadcast();
-  final _connectionStateController = StreamController<ConnectionState>.broadcast();
+  final _connectionStateController = StreamController<BridgeConnectionState>.broadcast();
 
   Stream<SimData> get simDataStream => _simDataController.stream;
-  Stream<ConnectionState> get connectionStateStream => _connectionStateController.stream;
+  Stream<BridgeConnectionState> get connectionStateStream => _connectionStateController.stream;
 
   bool get isConnected => _wsChannel != null;
 
@@ -59,7 +58,7 @@ class BridgeService {
         onDone: _handleWebSocketClosed,
       );
 
-      _connectionStateController.add(ConnectionState.connected);
+      _connectionStateController.add(BridgeConnectionState.connected);
     } catch (e) {
       throw Exception('Failed to establish WebSocket: $e');
     }
@@ -71,7 +70,7 @@ class BridgeService {
     _wsChannel = null;
     _dio = null;
     _sessionToken = null;
-    _connectionStateController.add(ConnectionState.disconnected);
+    _connectionStateController.add(BridgeConnectionState.disconnected);
   }
 
   /// Send audio data for transcription and command execution.
@@ -135,12 +134,12 @@ class BridgeService {
 
   void _handleWebSocketError(Object error) {
     print('WebSocket error: $error');
-    _connectionStateController.add(ConnectionState.error);
+    _connectionStateController.add(BridgeConnectionState.error);
   }
 
   void _handleWebSocketClosed() {
     print('WebSocket closed');
-    _connectionStateController.add(ConnectionState.disconnected);
+    _connectionStateController.add(BridgeConnectionState.disconnected);
   }
 
   void dispose() {
@@ -150,7 +149,7 @@ class BridgeService {
   }
 }
 
-enum ConnectionState {
+enum BridgeConnectionState {
   disconnected,
   connecting,
   connected,

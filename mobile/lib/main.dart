@@ -1,44 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'app.dart';
 
-import 'screens/home_screen.dart';
-import 'theme/app_theme.dart';
-
-void main() {
+void main() async {
+  // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Force portrait orientation
-  SystemChrome.setPreferredOrientations([
+  // Set preferred orientations (allow all for tablets)
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
 
-  // Dark status bar for aviation theme
+  // Set system UI overlay style for dark theme
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF0A0E14),
+      systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
 
+  // Run the app with Riverpod
   runApp(
     const ProviderScope(
       child: SmartFlightDeckApp(),
     ),
   );
-}
-
-class SmartFlightDeckApp extends StatelessWidget {
-  const SmartFlightDeckApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Smart Flight Deck',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const HomeScreen(),
-    );
-  }
 }

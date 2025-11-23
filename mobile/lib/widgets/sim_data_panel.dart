@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../services/bridge_service.dart';
 import '../theme/app_theme.dart';
@@ -144,11 +145,10 @@ class _DataItem extends StatelessWidget {
           children: [
             Text(
               value,
-              style: const TextStyle(
+              style: GoogleFonts.jetBrainsMono(
                 color: AppTheme.textPrimary,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'JetBrainsMono',
               ),
             ),
             const SizedBox(width: 2),

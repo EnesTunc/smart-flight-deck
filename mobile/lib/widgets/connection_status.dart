@@ -11,42 +11,38 @@ class ConnectionStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final bridgeService = BridgeService();
 
-    return StreamBuilder<ConnectionState>(
+    return StreamBuilder<BridgeConnectionState>(
       stream: bridgeService.connectionStateStream,
-      initialData: ConnectionState.disconnected,
+      initialData: BridgeConnectionState.disconnected,
       builder: (context, snapshot) {
-        final state = snapshot.data ?? ConnectionState.disconnected;
+        final state = snapshot.data ?? BridgeConnectionState.disconnected;
 
-        Color backgroundColor;
-        Color textColor;
-        String text;
-        IconData icon;
+        final Color backgroundColor;
+        final Color textColor;
+        final String text;
+        final IconData icon;
 
         switch (state) {
-          case ConnectionState.connected:
-            backgroundColor = AppTheme.secondaryColor.withOpacity(0.2);
+          case BridgeConnectionState.connected:
+            backgroundColor = AppTheme.secondaryColor.withValues(alpha: 0.2);
             textColor = AppTheme.secondaryColor;
             text = 'Connected';
             icon = Icons.check_circle;
-            break;
-          case ConnectionState.connecting:
-            backgroundColor = AppTheme.warningColor.withOpacity(0.2);
+          case BridgeConnectionState.connecting:
+            backgroundColor = AppTheme.warningColor.withValues(alpha: 0.2);
             textColor = AppTheme.warningColor;
             text = 'Connecting...';
             icon = Icons.sync;
-            break;
-          case ConnectionState.error:
-            backgroundColor = AppTheme.errorColor.withOpacity(0.2);
+          case BridgeConnectionState.error:
+            backgroundColor = AppTheme.errorColor.withValues(alpha: 0.2);
             textColor = AppTheme.errorColor;
             text = 'Connection Error';
             icon = Icons.error;
-            break;
-          case ConnectionState.disconnected:
+          case BridgeConnectionState.disconnected:
             backgroundColor = AppTheme.surfaceColor;
             textColor = AppTheme.textMuted;
             text = 'Disconnected';
             icon = Icons.cloud_off;
-            break;
         }
 
         return Container(
