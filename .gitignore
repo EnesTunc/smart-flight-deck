@@ -33,8 +33,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Python lib directories (not Flutter mobile/lib)
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -80,7 +81,7 @@ dmypy.json
 # ===========================
 # AI MODELS (Large files)
 # ===========================
-models/
+# Model files are large, only keep .gitkeep
 *.bin
 *.onnx
 *.pt

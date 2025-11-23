@@ -1,0 +1,9 @@
+# AI models directory
+# Place Whisper and Piper models here
+
+# Required models:
+# - whisper: base.en or small.en (faster-whisper format)
+# - piper: en_US-lessac-medium.onnx + .json config
+
+# Models are not committed to git due to size
+# Run: python scripts/download_models.py to fetch them
