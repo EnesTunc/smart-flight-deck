@@ -1,0 +1,130 @@
+{
+    "name": "Default Aircraft",
+    "description": "Standard SimConnect commands for default/generic aircraft",
+    "version": "1.0.0",
+    "detection": {
+        "fallback": true
+    },
+    "features": {
+        "lvar_support": false,
+        "fcu_control": false,
+        "mcdu_control": false,
+        "realistic_startup": false
+    },
+    "commands": {
+        "gear_up": {
+            "type": "simconnect",
+            "event": "GEAR_UP",
+            "description": "Retract landing gear"
+        },
+        "gear_down": {
+            "type": "simconnect",
+            "event": "GEAR_DOWN",
+            "description": "Extend landing gear"
+        },
+        "flaps_up": {
+            "type": "simconnect",
+            "event": "FLAPS_UP",
+            "description": "Retract flaps one notch"
+        },
+        "flaps_down": {
+            "type": "simconnect",
+            "event": "FLAPS_DOWN",
+            "description": "Extend flaps one notch"
+        },
+        "flaps_set": {
+            "type": "simconnect",
+            "event": "FLAPS_SET",
+            "value_required": true,
+            "value_map": {
+                "0": 0,
+                "1": 4096,
+                "2": 8192,
+                "3": 12288,
+                "full": 16383
+            }
+        },
+        "spoilers_arm": {
+            "type": "simconnect",
+            "event": "SPOILERS_ARM_TOGGLE"
+        },
+        "spoilers_deploy": {
+            "type": "simconnect",
+            "event": "SPOILERS_ON"
+        },
+        "spoilers_retract": {
+            "type": "simconnect",
+            "event": "SPOILERS_OFF"
+        },
+        "parking_brake_toggle": {
+            "type": "simconnect",
+            "event": "PARKING_BRAKES"
+        },
+        "landing_lights_on": {
+            "type": "simconnect",
+            "event": "LANDING_LIGHTS_ON"
+        },
+        "landing_lights_off": {
+            "type": "simconnect",
+            "event": "LANDING_LIGHTS_OFF"
+        },
+        "strobe_lights_toggle": {
+            "type": "simconnect",
+            "event": "STROBES_TOGGLE"
+        },
+        "beacon_lights_toggle": {
+            "type": "simconnect",
+            "event": "TOGGLE_BEACON_LIGHTS"
+        },
+        "nav_lights_toggle": {
+            "type": "simconnect",
+            "event": "TOGGLE_NAV_LIGHTS"
+        },
+        "taxi_lights_toggle": {
+            "type": "simconnect",
+            "event": "TOGGLE_TAXI_LIGHTS"
+        },
+        "autopilot_toggle": {
+            "type": "simconnect",
+            "event": "AP_MASTER"
+        },
+        "autopilot_heading_hold": {
+            "type": "simconnect",
+            "event": "AP_PANEL_HEADING_HOLD"
+        },
+        "autopilot_altitude_hold": {
+            "type": "simconnect",
+            "event": "AP_PANEL_ALTITUDE_HOLD"
+        },
+        "autopilot_nav_hold": {
+            "type": "simconnect",
+            "event": "AP_NAV1_HOLD"
+        },
+        "autopilot_approach": {
+            "type": "simconnect",
+            "event": "AP_APR_HOLD"
+        }
+    },
+    "variables": {
+        "gear_position": {
+            "type": "simvar",
+            "name": "GEAR_HANDLE_POSITION",
+            "unit": "Bool"
+        },
+        "flaps_position": {
+            "type": "simvar",
+            "name": "FLAPS_HANDLE_INDEX",
+            "unit": "Number"
+        },
+        "airspeed": {
+            "type": "simvar",
+            "name": "AIRSPEED_INDICATED",
+            "unit": "Knots"
+        },
+        "altitude": {
+            "type": "simvar",
+            "name": "PLANE_ALTITUDE",
+            "unit": "Feet"
+        }
+    }
+}

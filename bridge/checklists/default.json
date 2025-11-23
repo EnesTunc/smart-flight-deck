@@ -1,0 +1,422 @@
+{
+  "aircraft": "Default",
+  "version": "1.0",
+  "author": "Smart Flight Deck",
+  "checklists": {
+    "before_start": {
+      "name": "Before Start",
+      "phase": "PREFLIGHT",
+      "items": [
+        {
+          "id": "parking_brake",
+          "challenge": "Parking brake",
+          "expected_response": "Set",
+          "verification": {
+            "type": "simvar",
+            "variable": "BRAKE PARKING INDICATOR",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "beacon",
+          "challenge": "Beacon",
+          "expected_response": "On",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT BEACON",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "fuel_quantity",
+          "challenge": "Fuel quantity",
+          "expected_response": "Checked",
+          "verification": {
+            "type": "simvar",
+            "variable": "FUEL TOTAL QUANTITY",
+            "condition": "greater_than",
+            "value": 50
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Low fuel quantity!"
+        },
+        {
+          "id": "doors",
+          "challenge": "Doors",
+          "expected_response": "Closed",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "before_taxi": {
+      "name": "Before Taxi",
+      "phase": "TAXI",
+      "items": [
+        {
+          "id": "flight_controls",
+          "challenge": "Flight controls",
+          "expected_response": "Checked",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "flaps_taxi",
+          "challenge": "Flaps",
+          "expected_response": "Set for takeoff",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "in_range",
+            "min": 1,
+            "max": 3
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Flaps not set for takeoff!"
+        },
+        {
+          "id": "trim",
+          "challenge": "Trim",
+          "expected_response": "Set",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "nav_lights",
+          "challenge": "Navigation lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT NAV",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "before_takeoff": {
+      "name": "Before Takeoff",
+      "phase": "TAXI",
+      "items": [
+        {
+          "id": "flight_controls_takeoff",
+          "challenge": "Flight controls",
+          "expected_response": "Checked",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "flaps_takeoff",
+          "challenge": "Flaps",
+          "expected_response": "Set for takeoff",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "in_range",
+            "min": 1,
+            "max": 2
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Flaps not in takeoff configuration!"
+        },
+        {
+          "id": "spoilers_armed",
+          "challenge": "Spoilers",
+          "expected_response": "Armed",
+          "verification": {
+            "type": "simvar",
+            "variable": "SPOILERS ARMED",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "transponder",
+          "challenge": "Transponder",
+          "expected_response": "On",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "strobe_lights",
+          "challenge": "Strobe lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT STROBE",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "landing_lights",
+          "challenge": "Landing lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT LANDING",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "after_takeoff": {
+      "name": "After Takeoff",
+      "phase": "CLIMB",
+      "items": [
+        {
+          "id": "gear_up",
+          "challenge": "Landing gear",
+          "expected_response": "Up",
+          "verification": {
+            "type": "simvar",
+            "variable": "GEAR HANDLE POSITION",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Gear not retracted!"
+        },
+        {
+          "id": "flaps_up",
+          "challenge": "Flaps",
+          "expected_response": "Up",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "autopilot",
+          "challenge": "Autopilot",
+          "expected_response": "Engaged",
+          "verification": {
+            "type": "simvar",
+            "variable": "AUTOPILOT MASTER",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "approach": {
+      "name": "Approach",
+      "phase": "APPROACH",
+      "items": [
+        {
+          "id": "briefing",
+          "challenge": "Approach briefing",
+          "expected_response": "Completed",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "landing_lights_approach",
+          "challenge": "Landing lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT LANDING",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "autobrake",
+          "challenge": "Autobrake",
+          "expected_response": "Set",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "before_landing": {
+      "name": "Before Landing",
+      "phase": "APPROACH",
+      "items": [
+        {
+          "id": "gear_down",
+          "challenge": "Landing gear",
+          "expected_response": "Down and locked",
+          "verification": {
+            "type": "simvar",
+            "variable": "GEAR HANDLE POSITION",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "GEAR NOT DOWN!"
+        },
+        {
+          "id": "flaps_landing",
+          "challenge": "Flaps",
+          "expected_response": "Landing",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "greater_than",
+            "value": 2
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Flaps not in landing configuration!"
+        },
+        {
+          "id": "spoilers_landing",
+          "challenge": "Spoilers",
+          "expected_response": "Armed",
+          "verification": {
+            "type": "simvar",
+            "variable": "SPOILERS ARMED",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Spoilers not armed!"
+        }
+      ]
+    },
+    "after_landing": {
+      "name": "After Landing",
+      "phase": "LANDING",
+      "items": [
+        {
+          "id": "spoilers_retract",
+          "challenge": "Spoilers",
+          "expected_response": "Retracted",
+          "verification": {
+            "type": "simvar",
+            "variable": "SPOILERS HANDLE POSITION",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "flaps_retract",
+          "challenge": "Flaps",
+          "expected_response": "Up",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "strobe_off",
+          "challenge": "Strobe lights",
+          "expected_response": "Off",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT STROBE",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "taxi_light_on",
+          "challenge": "Taxi light",
+          "expected_response": "On",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT TAXI",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "shutdown": {
+      "name": "Shutdown",
+      "phase": "SHUTDOWN",
+      "items": [
+        {
+          "id": "parking_brake_set",
+          "challenge": "Parking brake",
+          "expected_response": "Set",
+          "verification": {
+            "type": "simvar",
+            "variable": "BRAKE PARKING INDICATOR",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "engines_off",
+          "challenge": "Engines",
+          "expected_response": "Off",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "beacon_off",
+          "challenge": "Beacon",
+          "expected_response": "Off",
+          "verification": {
+            "type": "simvar",
+            "variable": "LIGHT BEACON",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "all_lights_off",
+          "challenge": "All exterior lights",
+          "expected_response": "Off",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    }
+  }
+}

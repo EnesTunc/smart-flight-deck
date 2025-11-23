@@ -238,3 +238,763 @@ async def execute_sim_command(
         "command": command,
         "message": f"Command '{command}' executed",
     }
+
+
+# ===========================
+# WASM Management Endpoints
+# ===========================
+
+
+class WASMStatusResponse(BaseModel):
+    """WASM installation status."""
+
+    installed: bool
+    path: Optional[str] = None
+    version: Optional[str] = None
+    needs_update: bool = False
+    msfs_found: bool = False
+    community_folder: Optional[str] = None
+    error_message: str = ""
+
+
+class WASMInstallRequest(BaseModel):
+    """WASM installation request."""
+
+    auto_install: bool = True
+
+
+class AircraftProfileInfo(BaseModel):
+    """Aircraft profile information."""
+
+    name: str
+    has_lvar_support: bool
+    has_fcu_control: bool
+    has_mcp_control: bool
+    available_commands: list[str] = []
+
+
+@router.get("/wasm/status", response_model=WASMStatusResponse)
+async def get_wasm_status():
+    """
+    Check MobiFlight WASM installation status.
+
+    No authentication required - this is used during initial setup.
+    """
+    from sim import WASMManager, MSFSDetector
+
+    wasm_manager = WASMManager()
+    detector = MSFSDetector()
+
+    # Check MSFS installation
+    installations = detector.detect_all()
+    msfs_found = len(installations) > 0
+    community_folder = None
+
+    if installations:
+        community_folder = str(installations[0].community_path)
+
+    # Check WASM status
+    status = wasm_manager.check_wasm_status()
+
+    return WASMStatusResponse(
+        installed=status.installed,
+        path=str(status.path) if status.path else None,
+        version=status.version,
+        needs_update=status.needs_update,
+        msfs_found=msfs_found,
+        community_folder=community_folder,
+        error_message=status.error_message,
+    )
+
+
+@router.post("/wasm/install")
+async def install_wasm(request: WASMInstallRequest = None):
+    """
+    Install MobiFlight WASM module.
+
+    Downloads from GitHub and installs to MSFS Community folder.
+    No authentication required - this is used during initial setup.
+    """
+    from sim import WASMManager
+
+    wasm_manager = WASMManager()
+
+    # Check current status
+    status = wasm_manager.check_wasm_status()
+
+    if status.installed and not status.needs_update:
+        return {
+            "success": True,
+            "message": "MobiFlight WASM is already installed",
+            "path": str(status.path),
+        }
+
+    # Install WASM
+    success, message = await wasm_manager.install_wasm()
+
+    if success:
+        new_status = wasm_manager.check_wasm_status()
+        return {
+            "success": True,
+            "message": message,
+            "path": str(new_status.path) if new_status.path else None,
+            "note": "Please restart MSFS for changes to take effect",
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"WASM installation failed: {message}"
+        )
+
+
+@router.delete("/wasm/uninstall")
+async def uninstall_wasm():
+    """
+    Uninstall MobiFlight WASM module.
+
+    Removes from MSFS Community folder.
+    """
+    from sim import WASMManager
+
+    wasm_manager = WASMManager()
+
+    success, message = wasm_manager.uninstall_wasm()
+
+    if success:
+        return {
+            "success": True,
+            "message": message,
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"WASM uninstallation failed: {message}"
+        )
+
+
+@router.get("/wasm/msfs-paths")
+async def get_msfs_paths():
+    """
+    Get detected MSFS installation paths.
+
+    Useful for troubleshooting installation issues.
+    """
+    from sim import MSFSDetector
+
+    detector = MSFSDetector()
+    installations = detector.detect_all()
+
+    return {
+        "found": len(installations),
+        "installations": [
+            {
+                "edition": inst.edition.value,
+                "packages_path": str(inst.packages_path),
+                "community_path": str(inst.community_path),
+            }
+            for inst in installations
+        ],
+    }
+
+
+# ===========================
+# Aircraft Profile Endpoints
+# ===========================
+
+
+@router.get("/aircraft/profile", response_model=AircraftProfileInfo)
+async def get_current_aircraft_profile(x_session_token: str = Header(...)):
+    """Get current aircraft's profile information."""
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    from sim import AircraftDetector
+
+    # TODO: Get actual aircraft from SimConnect
+    detector = AircraftDetector()
+
+    # For now, return default profile info
+    profile = detector._loader.get_default_profile()
+
+    if profile:
+        return AircraftProfileInfo(
+            name=profile.name,
+            has_lvar_support=profile.has_lvar_support,
+            has_fcu_control=profile.has_fcu_control,
+            has_mcp_control=profile.has_mcp_control,
+            available_commands=list(profile.commands.keys()),
+        )
+
+    return AircraftProfileInfo(
+        name="Unknown",
+        has_lvar_support=False,
+        has_fcu_control=False,
+        has_mcp_control=False,
+        available_commands=[],
+    )
+
+
+@router.get("/aircraft/profiles")
+async def list_aircraft_profiles():
+    """List all available aircraft profiles."""
+    from sim import ProfileLoader
+
+    loader = ProfileLoader()
+    profiles = []
+
+    for profile_id in loader.list_profiles():
+        profile = loader.get_profile(profile_id)
+        if profile:
+            profiles.append({
+                "id": profile_id,
+                "name": profile.name,
+                "has_lvar_support": profile.has_lvar_support,
+                "features": profile.features,
+            })
+
+    # Add default profile
+    default = loader.get_default_profile()
+    if default:
+        profiles.append({
+            "id": "default",
+            "name": default.name,
+            "has_lvar_support": default.has_lvar_support,
+            "features": default.features,
+            "is_default": True,
+        })
+
+    return {"profiles": profiles}
+
+
+# ===========================
+# Context Engine Endpoints
+# ===========================
+
+
+class ContextStatus(BaseModel):
+    """Flight context status."""
+
+    phase: str
+    phase_display: str
+    on_ground: bool
+    speed: float
+    altitude: float
+    altitude_agl: float
+    is_critical: bool
+    aircraft: str
+    limits: Optional[dict] = None
+
+
+class PhaseInfo(BaseModel):
+    """Detailed flight phase information."""
+
+    current: str
+    previous: str
+    is_ground_phase: bool
+    is_critical_phase: bool
+    duration_seconds: float
+
+
+class SafetyEvaluationRequest(BaseModel):
+    """Request to evaluate command safety."""
+
+    command_id: str
+    value: Optional[float] = None
+    override: bool = False
+
+
+class SafetyEvaluationResponse(BaseModel):
+    """Safety evaluation result."""
+
+    allowed: bool
+    action: str
+    message: Optional[str] = None
+    warning: Optional[str] = None
+    details: dict = {}
+
+
+# Global context engine instance
+_context_engine = None
+
+
+def get_context_engine():
+    """Get or create context engine instance."""
+    global _context_engine
+    if _context_engine is None:
+        from logic import ContextEngine
+        _context_engine = ContextEngine()
+    return _context_engine
+
+
+@router.get("/context/status", response_model=ContextStatus)
+async def get_context_status(x_session_token: str = Header(...)):
+    """
+    Get current flight context status.
+
+    Returns flight phase, aircraft state, and active limits.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    ctx = get_context_engine()
+
+    return ContextStatus(
+        phase=ctx.phase.name,
+        phase_display=ctx.phase.display_name,
+        on_ground=ctx.is_on_ground,
+        speed=ctx.current_speed,
+        altitude=ctx.current_altitude,
+        altitude_agl=ctx.current_altitude_agl,
+        is_critical=ctx.is_critical_phase,
+        aircraft=ctx.aircraft_title,
+        limits=ctx.speed_limits.to_dict() if ctx.speed_limits else None,
+    )
+
+
+@router.get("/context/phase", response_model=PhaseInfo)
+async def get_flight_phase(x_session_token: str = Header(...)):
+    """
+    Get detailed flight phase information.
+
+    Includes current/previous phase, duration, and phase characteristics.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    ctx = get_context_engine()
+    phase_info = ctx.get_phase_info()
+
+    return PhaseInfo(
+        current=phase_info["current"],
+        previous=phase_info["previous"],
+        is_ground_phase=phase_info["is_ground"],
+        is_critical_phase=phase_info["is_critical"],
+        duration_seconds=phase_info["duration"],
+    )
+
+
+@router.post("/context/evaluate", response_model=SafetyEvaluationResponse)
+async def evaluate_command_safety(
+    request: SafetyEvaluationRequest,
+    x_session_token: str = Header(...),
+):
+    """
+    Evaluate if a command is safe to execute.
+
+    Checks speed limits, flight phase restrictions, and safety rules.
+    Returns action recommendation: ALLOW, REMIND, WARN, CONFIRM, or BLOCK.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    ctx = get_context_engine()
+
+    result = ctx.evaluate_command(
+        command_id=request.command_id,
+        value=request.value,
+        override=request.override,
+    )
+
+    return SafetyEvaluationResponse(
+        allowed=result.allowed,
+        action=result.action.name,
+        message=result.reason,
+        warning=result.warning,
+        details=result.details,
+    )
+
+
+@router.post("/context/update")
+async def update_context(
+    on_ground: bool,
+    altitude: float,
+    altitude_agl: float,
+    speed: float,
+    ground_speed: float,
+    vertical_speed: float,
+    gear_down: bool = True,
+    flaps_index: int = 0,
+    engine1_running: bool = False,
+    engine2_running: bool = False,
+    parking_brake: bool = False,
+    aircraft_title: str = "",
+    x_session_token: str = Header(...),
+):
+    """
+    Update flight context with current aircraft state.
+
+    Called periodically by SimConnect data handler.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    ctx = get_context_engine()
+
+    ctx.update_from_simconnect(
+        altitude=altitude,
+        altitude_agl=altitude_agl,
+        speed=speed,
+        ground_speed=ground_speed,
+        vertical_speed=vertical_speed,
+        on_ground=on_ground,
+        gear_down=gear_down,
+        flaps_index=flaps_index,
+        engine1_running=engine1_running,
+        engine2_running=engine2_running,
+        parking_brake=parking_brake,
+        aircraft_title=aircraft_title,
+    )
+
+    return {
+        "success": True,
+        "phase": ctx.phase.display_name,
+        "is_critical": ctx.is_critical_phase,
+    }
+
+
+@router.get("/context/limits")
+async def get_speed_limits(x_session_token: str = Header(...)):
+    """
+    Get current aircraft speed limits.
+
+    Returns Vmo, Mmo, Vlo, Vle, Vfe for current aircraft.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    ctx = get_context_engine()
+
+    if ctx.speed_limits:
+        return {
+            "aircraft": ctx.aircraft_title,
+            "limits": ctx.speed_limits.to_dict(),
+        }
+
+    return {
+        "aircraft": ctx.aircraft_title or "Unknown",
+        "limits": None,
+        "message": "No aircraft loaded or limits not available",
+    }
+
+
+# ===========================
+# Checklist Endpoints
+# ===========================
+
+
+class ChecklistInfo(BaseModel):
+    """Checklist information."""
+    id: str
+    name: str
+    name_tr: str
+    phase: str
+    items_count: int
+
+
+class ChecklistItemInfo(BaseModel):
+    """Checklist item information."""
+    id: str
+    challenge: str
+    expected: str
+    critical: bool = False
+    notes: Optional[str] = None
+
+
+class ChecklistStatusResponse(BaseModel):
+    """Checklist status response."""
+    active: bool
+    state: str
+    checklist_name: Optional[str] = None
+    current_item: Optional[ChecklistItemInfo] = None
+    progress: float = 0.0
+    items_remaining: int = 0
+
+
+class ChecklistActionResponse(BaseModel):
+    """Response from checklist actions."""
+    success: bool
+    state: str
+    message: str
+    tts_text: str
+    current_item: Optional[ChecklistItemInfo] = None
+    verified: Optional[bool] = None
+    verification_message: Optional[str] = None
+    progress: float = 0.0
+    items_remaining: int = 0
+
+
+class ChecklistResponseRequest(BaseModel):
+    """Request for checklist response."""
+    response: str  # "check", "skip", "override", "repeat"
+
+
+# Global checklist manager instance
+_checklist_manager = None
+
+
+def get_checklist_manager():
+    """Get or create checklist manager instance."""
+    global _checklist_manager
+    if _checklist_manager is None:
+        from logic import ChecklistManager
+        _checklist_manager = ChecklistManager()
+    return _checklist_manager
+
+
+@router.get("/checklist/list")
+async def list_checklists(x_session_token: str = Header(...)):
+    """
+    List available checklists for current aircraft.
+
+    Returns all checklists that can be started.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    manager = get_checklist_manager()
+    checklists = manager.list_available()
+
+    return {
+        "aircraft": manager._current_aircraft or "Default",
+        "checklists": checklists,
+    }
+
+
+@router.post("/checklist/start/{checklist_id}", response_model=ChecklistActionResponse)
+async def start_checklist(
+    checklist_id: str,
+    x_session_token: str = Header(...),
+):
+    """
+    Start a checklist by ID.
+
+    Begins the challenge-response sequence.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    manager = get_checklist_manager()
+
+    # Try to find checklist by ID or name
+    actual_id = manager.find_checklist_by_name(checklist_id)
+    if not actual_id:
+        actual_id = checklist_id
+
+    result = manager.start_checklist(actual_id)
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Checklist '{checklist_id}' not found"
+        )
+
+    current_item = None
+    if result.current_item:
+        current_item = ChecklistItemInfo(
+            id=result.current_item.get("id", ""),
+            challenge=result.current_item.get("challenge", ""),
+            expected=result.current_item.get("expected", ""),
+            critical=result.current_item.get("critical", False),
+            notes=result.current_item.get("notes"),
+        )
+
+    return ChecklistActionResponse(
+        success=result.success,
+        state=result.state.name,
+        message=result.message,
+        tts_text=result.tts_text,
+        current_item=current_item,
+        progress=result.progress,
+        items_remaining=result.items_remaining,
+    )
+
+
+@router.get("/checklist/status", response_model=ChecklistStatusResponse)
+async def get_checklist_status(x_session_token: str = Header(...)):
+    """
+    Get current checklist status.
+
+    Returns active checklist info and current item.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    manager = get_checklist_manager()
+    engine = manager.engine
+
+    current_item = None
+    if engine.current_item:
+        item = engine.current_item
+        current_item = ChecklistItemInfo(
+            id=item.id,
+            challenge=item.challenge,
+            expected=item.expected_response,
+            critical=item.critical,
+            notes=item.notes,
+        )
+
+    return ChecklistStatusResponse(
+        active=engine.is_active,
+        state=engine.state.name,
+        checklist_name=engine.active_checklist.name if engine.active_checklist else None,
+        current_item=current_item,
+        progress=engine.progress,
+        items_remaining=engine.items_remaining,
+    )
+
+
+@router.post("/checklist/response", response_model=ChecklistActionResponse)
+async def send_checklist_response(
+    request: ChecklistResponseRequest,
+    x_session_token: str = Header(...),
+):
+    """
+    Send a response to the current checklist item.
+
+    Valid responses: "check", "skip", "override", "repeat"
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    from logic import UserResponse, parse_user_response
+
+    manager = get_checklist_manager()
+    engine = manager.engine
+
+    if not engine.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="No active checklist"
+        )
+
+    # Parse response
+    user_response = parse_user_response(request.response)
+    if not user_response:
+        # Try direct mapping
+        response_map = {
+            "check": UserResponse.CHECK,
+            "skip": UserResponse.SKIP,
+            "override": UserResponse.OVERRIDE,
+            "repeat": UserResponse.REPEAT,
+        }
+        user_response = response_map.get(request.response.lower())
+
+    if not user_response:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid response: {request.response}. Use: check, skip, override, repeat"
+        )
+
+    result = engine.respond(user_response)
+
+    current_item = None
+    if result.current_item:
+        current_item = ChecklistItemInfo(
+            id=result.current_item.get("id", ""),
+            challenge=result.current_item.get("challenge", ""),
+            expected=result.current_item.get("expected", ""),
+            critical=result.current_item.get("critical", False),
+        )
+
+    return ChecklistActionResponse(
+        success=result.success,
+        state=result.state.name,
+        message=result.message,
+        tts_text=result.tts_text,
+        current_item=current_item,
+        verified=result.verified,
+        verification_message=result.verification_message,
+        progress=result.progress,
+        items_remaining=result.items_remaining,
+    )
+
+
+@router.post("/checklist/pause", response_model=ChecklistActionResponse)
+async def pause_checklist(x_session_token: str = Header(...)):
+    """Pause the active checklist."""
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    manager = get_checklist_manager()
+    result = manager.engine.pause()
+
+    return ChecklistActionResponse(
+        success=result.success,
+        state=result.state.name,
+        message=result.message,
+        tts_text=result.tts_text,
+        progress=result.progress,
+        items_remaining=result.items_remaining,
+    )
+
+
+@router.post("/checklist/resume", response_model=ChecklistActionResponse)
+async def resume_checklist(x_session_token: str = Header(...)):
+    """Resume a paused checklist."""
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    manager = get_checklist_manager()
+    result = manager.engine.resume()
+
+    current_item = None
+    if result.current_item:
+        current_item = ChecklistItemInfo(
+            id=result.current_item.get("id", ""),
+            challenge=result.current_item.get("challenge", ""),
+            expected=result.current_item.get("expected", ""),
+            critical=result.current_item.get("critical", False),
+        )
+
+    return ChecklistActionResponse(
+        success=result.success,
+        state=result.state.name,
+        message=result.message,
+        tts_text=result.tts_text,
+        current_item=current_item,
+        progress=result.progress,
+        items_remaining=result.items_remaining,
+    )
+
+
+@router.post("/checklist/cancel", response_model=ChecklistActionResponse)
+async def cancel_checklist(x_session_token: str = Header(...)):
+    """Cancel the active checklist."""
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    manager = get_checklist_manager()
+    result = manager.engine.cancel()
+
+    return ChecklistActionResponse(
+        success=result.success,
+        state=result.state.name,
+        message=result.message,
+        tts_text=result.tts_text,
+    )
+
+
+@router.post("/checklist/set-aircraft")
+async def set_checklist_aircraft(
+    aircraft_title: str,
+    x_session_token: str = Header(...),
+):
+    """
+    Set the current aircraft for checklist selection.
+
+    This determines which checklist profile is used.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    manager = get_checklist_manager()
+    manager.set_aircraft(aircraft_title)
+
+    checklists = manager.list_available()
+
+    return {
+        "success": True,
+        "aircraft": aircraft_title,
+        "available_checklists": len(checklists),
+        "checklists": checklists,
+    }

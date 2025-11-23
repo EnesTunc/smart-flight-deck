@@ -1,0 +1,325 @@
+{
+    "name": "FlyByWire A32NX",
+    "description": "FlyByWire Airbus A320neo - Full LVAR support",
+    "version": "1.0.0",
+    "author": "Smart Flight Deck",
+    "aircraft_url": "https://flybywiresim.com/",
+    "detection": {
+        "title_contains": ["FlyByWire", "A32NX", "FBW"],
+        "livery_contains": []
+    },
+    "features": {
+        "lvar_support": true,
+        "fcu_control": true,
+        "mcdu_control": false,
+        "realistic_startup": true,
+        "custom_lights": true,
+        "efb_control": false
+    },
+    "commands": {
+        "gear_up": {
+            "type": "simconnect",
+            "event": "GEAR_UP",
+            "description": "Retract landing gear"
+        },
+        "gear_down": {
+            "type": "simconnect",
+            "event": "GEAR_DOWN",
+            "description": "Extend landing gear"
+        },
+        "flaps_set": {
+            "type": "lvar",
+            "lvar": "A32NX_FLAPS_HANDLE_INDEX",
+            "action": "set",
+            "value_map": {
+                "0": 0,
+                "1": 1,
+                "2": 2,
+                "3": 3,
+                "full": 4
+            }
+        },
+        "spoilers_arm": {
+            "type": "lvar",
+            "lvar": "A32NX_SPOILERS_ARMED",
+            "action": "toggle",
+            "description": "Arm/disarm ground spoilers"
+        },
+        "spoilers_deploy": {
+            "type": "simconnect",
+            "event": "SPOILERS_ON"
+        },
+        "spoilers_retract": {
+            "type": "simconnect",
+            "event": "SPOILERS_OFF"
+        },
+        "parking_brake_toggle": {
+            "type": "simconnect",
+            "event": "PARKING_BRAKES"
+        },
+
+        "fcu_speed_set": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_SPEED_SELECTED",
+            "action": "set",
+            "description": "Set selected speed on FCU"
+        },
+        "fcu_speed_managed": {
+            "type": "hevent",
+            "event": "A32NX_FCU_SPD_PUSH",
+            "description": "Push SPD knob for managed speed"
+        },
+        "fcu_speed_selected": {
+            "type": "hevent",
+            "event": "A32NX_FCU_SPD_PULL",
+            "description": "Pull SPD knob for selected speed"
+        },
+        "fcu_heading_set": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_HEADING_SELECTED",
+            "action": "set",
+            "description": "Set selected heading on FCU"
+        },
+        "fcu_heading_managed": {
+            "type": "hevent",
+            "event": "A32NX_FCU_HDG_PUSH",
+            "description": "Push HDG knob for managed heading"
+        },
+        "fcu_heading_selected": {
+            "type": "hevent",
+            "event": "A32NX_FCU_HDG_PULL",
+            "description": "Pull HDG knob for selected heading"
+        },
+        "fcu_altitude_set": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_ALT_SELECTED",
+            "action": "set",
+            "description": "Set selected altitude on FCU"
+        },
+        "fcu_altitude_managed": {
+            "type": "hevent",
+            "event": "A32NX_FCU_ALT_PUSH",
+            "description": "Push ALT knob for managed altitude"
+        },
+        "fcu_altitude_selected": {
+            "type": "hevent",
+            "event": "A32NX_FCU_ALT_PULL",
+            "description": "Pull ALT knob for selected altitude"
+        },
+        "fcu_vs_set": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_VS_SELECTED",
+            "action": "set",
+            "description": "Set vertical speed on FCU"
+        },
+        "fcu_vs_push": {
+            "type": "hevent",
+            "event": "A32NX_FCU_VS_PUSH",
+            "description": "Push V/S knob (level off)"
+        },
+        "fcu_vs_pull": {
+            "type": "hevent",
+            "event": "A32NX_FCU_VS_PULL",
+            "description": "Pull V/S knob"
+        },
+
+        "ap1_push": {
+            "type": "hevent",
+            "event": "A32NX_FCU_AP_1_PUSH",
+            "description": "Engage Autopilot 1"
+        },
+        "ap2_push": {
+            "type": "hevent",
+            "event": "A32NX_FCU_AP_2_PUSH",
+            "description": "Engage Autopilot 2"
+        },
+        "athr_push": {
+            "type": "hevent",
+            "event": "A32NX_FCU_ATHR_PUSH",
+            "description": "Toggle Autothrust"
+        },
+        "loc_push": {
+            "type": "hevent",
+            "event": "A32NX_FCU_LOC_PUSH",
+            "description": "Engage LOC mode"
+        },
+        "appr_push": {
+            "type": "hevent",
+            "event": "A32NX_FCU_APPR_PUSH",
+            "description": "Engage APPR mode"
+        },
+
+        "landing_lights_on": {
+            "type": "lvar",
+            "lvar": "LIGHTING_LANDING_1",
+            "action": "set",
+            "value": 2
+        },
+        "landing_lights_off": {
+            "type": "lvar",
+            "lvar": "LIGHTING_LANDING_1",
+            "action": "set",
+            "value": 0
+        },
+        "strobe_lights_on": {
+            "type": "lvar",
+            "lvar": "LIGHTING_STROBE_0",
+            "action": "set",
+            "value": 1
+        },
+        "strobe_lights_auto": {
+            "type": "lvar",
+            "lvar": "LIGHTING_STROBE_0",
+            "action": "set",
+            "value": 2
+        },
+        "strobe_lights_off": {
+            "type": "lvar",
+            "lvar": "LIGHTING_STROBE_0",
+            "action": "set",
+            "value": 0
+        },
+        "beacon_lights_toggle": {
+            "type": "lvar",
+            "lvar": "LIGHTING_BEACON_0",
+            "action": "toggle"
+        },
+        "nav_lights_toggle": {
+            "type": "lvar",
+            "lvar": "LIGHTING_NAV_0",
+            "action": "toggle"
+        },
+        "runway_turnoff_lights_toggle": {
+            "type": "lvar",
+            "lvar": "LIGHTING_RUNWAY_TURNOFF",
+            "action": "toggle"
+        },
+        "wing_lights_toggle": {
+            "type": "lvar",
+            "lvar": "LIGHTING_WING_0",
+            "action": "toggle"
+        },
+
+        "seatbelt_sign_toggle": {
+            "type": "lvar",
+            "lvar": "A32NX_CABIN_SEATBELTS_ALERT_ON",
+            "action": "toggle"
+        },
+        "no_smoking_sign_toggle": {
+            "type": "lvar",
+            "lvar": "A32NX_CABIN_NO_SMOKING_ALERT_ON",
+            "action": "toggle"
+        },
+
+        "apu_master_on": {
+            "type": "lvar",
+            "lvar": "A32NX_OVHD_APU_MASTER_SW_PB_IS_ON",
+            "action": "set",
+            "value": 1
+        },
+        "apu_master_off": {
+            "type": "lvar",
+            "lvar": "A32NX_OVHD_APU_MASTER_SW_PB_IS_ON",
+            "action": "set",
+            "value": 0
+        },
+        "apu_start": {
+            "type": "lvar",
+            "lvar": "A32NX_OVHD_APU_START_PB_IS_ON",
+            "action": "set",
+            "value": 1
+        },
+
+        "engine_mode_ign": {
+            "type": "lvar",
+            "lvar": "A32NX_ENG_MODE_SELECTOR",
+            "action": "set",
+            "value": 1
+        },
+        "engine_mode_norm": {
+            "type": "lvar",
+            "lvar": "A32NX_ENG_MODE_SELECTOR",
+            "action": "set",
+            "value": 2
+        },
+        "engine_mode_crank": {
+            "type": "lvar",
+            "lvar": "A32NX_ENG_MODE_SELECTOR",
+            "action": "set",
+            "value": 0
+        },
+        "engine1_master_on": {
+            "type": "lvar",
+            "lvar": "A32NX_ENGINE_N1:1",
+            "action": "set",
+            "value": 1
+        },
+        "engine2_master_on": {
+            "type": "lvar",
+            "lvar": "A32NX_ENGINE_N1:2",
+            "action": "set",
+            "value": 1
+        }
+    },
+    "variables": {
+        "gear_position": {
+            "type": "simvar",
+            "name": "GEAR_HANDLE_POSITION",
+            "unit": "Bool"
+        },
+        "flaps_position": {
+            "type": "lvar",
+            "lvar": "A32NX_FLAPS_HANDLE_INDEX"
+        },
+        "spoilers_armed": {
+            "type": "lvar",
+            "lvar": "A32NX_SPOILERS_ARMED"
+        },
+        "fcu_speed": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_SPEED_SELECTED"
+        },
+        "fcu_heading": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_HEADING_SELECTED"
+        },
+        "fcu_altitude": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_ALT_SELECTED"
+        },
+        "fcu_vs": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_VS_SELECTED"
+        },
+        "ap1_active": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_1_ACTIVE"
+        },
+        "ap2_active": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOPILOT_2_ACTIVE"
+        },
+        "athr_active": {
+            "type": "lvar",
+            "lvar": "A32NX_AUTOTHRUST_STATUS"
+        },
+        "flight_phase": {
+            "type": "lvar",
+            "lvar": "A32NX_FWC_FLIGHT_PHASE"
+        },
+        "apu_available": {
+            "type": "lvar",
+            "lvar": "A32NX_OVHD_APU_START_PB_IS_AVAILABLE"
+        }
+    },
+    "responses": {
+        "gear_down": "Gear down, three green.",
+        "gear_up": "Gear up.",
+        "flaps_set": "Flaps {value}.",
+        "spoilers_arm": "Spoilers armed.",
+        "ap1_push": "Autopilot one engaged.",
+        "ap2_push": "Autopilot two engaged.",
+        "athr_push": "Autothrust {state}.",
+        "appr_push": "Approach mode armed."
+    }
+}

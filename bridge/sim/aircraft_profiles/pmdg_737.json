@@ -1,0 +1,279 @@
+{
+    "name": "PMDG 737",
+    "description": "PMDG Boeing 737-700/800/900 - LVAR support",
+    "version": "1.0.0",
+    "author": "Smart Flight Deck",
+    "aircraft_url": "https://pmdg.com/",
+    "detection": {
+        "title_contains": ["PMDG", "737"],
+        "livery_contains": []
+    },
+    "features": {
+        "lvar_support": true,
+        "mcp_control": true,
+        "fmc_control": false,
+        "realistic_startup": true,
+        "custom_lights": true,
+        "efb_control": false
+    },
+    "notes": "PMDG uses numeric LVAR IDs. Refer to PMDG SDK documentation for full list.",
+    "commands": {
+        "gear_up": {
+            "type": "simconnect",
+            "event": "GEAR_UP"
+        },
+        "gear_down": {
+            "type": "simconnect",
+            "event": "GEAR_DOWN"
+        },
+        "flaps_set": {
+            "type": "lvar",
+            "lvar": "PMDG_Flap_Handle_Position",
+            "action": "set",
+            "value_map": {
+                "0": 0,
+                "1": 1,
+                "2": 2,
+                "5": 3,
+                "10": 4,
+                "15": 5,
+                "25": 6,
+                "30": 7,
+                "40": 8
+            }
+        },
+        "speedbrake_arm": {
+            "type": "lvar",
+            "lvar": "PMDG_Speedbrake_Armed",
+            "action": "set",
+            "value": 1
+        },
+        "speedbrake_disarm": {
+            "type": "lvar",
+            "lvar": "PMDG_Speedbrake_Armed",
+            "action": "set",
+            "value": 0
+        },
+        "parking_brake_toggle": {
+            "type": "simconnect",
+            "event": "PARKING_BRAKES"
+        },
+
+        "mcp_speed_set": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_IAS_Mach",
+            "action": "set"
+        },
+        "mcp_speed_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_Speed_Push"
+        },
+        "mcp_heading_set": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_Heading",
+            "action": "set"
+        },
+        "mcp_heading_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_Heading_Push"
+        },
+        "mcp_altitude_set": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_Altitude",
+            "action": "set"
+        },
+        "mcp_vs_set": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_VS",
+            "action": "set"
+        },
+
+        "ap_cmd_a": {
+            "type": "hevent",
+            "event": "PMDG_MCP_CMD_A_Press",
+            "description": "Engage CMD A autopilot"
+        },
+        "ap_cmd_b": {
+            "type": "hevent",
+            "event": "PMDG_MCP_CMD_B_Press",
+            "description": "Engage CMD B autopilot"
+        },
+        "ap_disconnect": {
+            "type": "hevent",
+            "event": "PMDG_MCP_AP_Disengage_Press"
+        },
+        "at_arm": {
+            "type": "hevent",
+            "event": "PMDG_MCP_AT_Arm_Press",
+            "description": "Arm autothrottle"
+        },
+        "lnav_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_LNAV_Press"
+        },
+        "vnav_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_VNAV_Press"
+        },
+        "hdg_sel_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_HDG_SEL_Press"
+        },
+        "alt_hold_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_ALT_HLD_Press"
+        },
+        "vs_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_VS_Press"
+        },
+        "app_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_APP_Press"
+        },
+        "vor_loc_push": {
+            "type": "hevent",
+            "event": "PMDG_MCP_VOR_LOC_Press"
+        },
+
+        "landing_lights_on": {
+            "type": "lvar",
+            "lvar": "PMDG_LandingLights_Sw_L_OutBd",
+            "action": "set",
+            "value": 1
+        },
+        "landing_lights_off": {
+            "type": "lvar",
+            "lvar": "PMDG_LandingLights_Sw_L_OutBd",
+            "action": "set",
+            "value": 0
+        },
+        "runway_turnoff_lights_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_RunwayTurnoffLights_Sw",
+            "action": "toggle"
+        },
+        "taxi_lights_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_TaxiLights_Sw",
+            "action": "toggle"
+        },
+        "logo_lights_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_LogoLights_Sw",
+            "action": "toggle"
+        },
+        "position_lights_set": {
+            "type": "lvar",
+            "lvar": "PMDG_PositionLights_Sw",
+            "action": "set",
+            "value_map": {
+                "off": 0,
+                "steady": 1,
+                "strobe": 2
+            }
+        },
+        "beacon_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_AntiCollisionLight_Sw",
+            "action": "toggle"
+        },
+        "wing_lights_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_WingLights_Sw",
+            "action": "toggle"
+        },
+
+        "seatbelt_sign_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_SeatBeltSign_Sw",
+            "action": "toggle"
+        },
+        "no_smoking_sign_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_NoSmokingSign_Sw",
+            "action": "toggle"
+        },
+
+        "apu_toggle": {
+            "type": "lvar",
+            "lvar": "PMDG_APU_Selector",
+            "action": "set",
+            "value_map": {
+                "off": 0,
+                "on": 1,
+                "start": 2
+            }
+        },
+
+        "engine1_start": {
+            "type": "lvar",
+            "lvar": "PMDG_EngineStart_Sw_1",
+            "action": "set",
+            "value": 2
+        },
+        "engine2_start": {
+            "type": "lvar",
+            "lvar": "PMDG_EngineStart_Sw_2",
+            "action": "set",
+            "value": 2
+        },
+        "engine_start_cutoff": {
+            "type": "lvar",
+            "lvar": "PMDG_EngineStart_Sw_1",
+            "action": "set",
+            "value": 0
+        }
+    },
+    "variables": {
+        "gear_position": {
+            "type": "simvar",
+            "name": "GEAR_HANDLE_POSITION",
+            "unit": "Bool"
+        },
+        "flaps_position": {
+            "type": "lvar",
+            "lvar": "PMDG_Flap_Handle_Position"
+        },
+        "mcp_speed": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_IAS_Mach"
+        },
+        "mcp_heading": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_Heading"
+        },
+        "mcp_altitude": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_Altitude"
+        },
+        "mcp_vs": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_VS"
+        },
+        "cmd_a_active": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_annunCMD_A"
+        },
+        "cmd_b_active": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_annunCMD_B"
+        },
+        "at_armed": {
+            "type": "lvar",
+            "lvar": "PMDG_MCP_annunAT_ARM"
+        }
+    },
+    "responses": {
+        "gear_down": "Gear down, three green.",
+        "gear_up": "Gear up.",
+        "flaps_set": "Flaps {value}.",
+        "speedbrake_arm": "Speed brake armed.",
+        "ap_cmd_a": "Command A engaged.",
+        "ap_cmd_b": "Command B engaged.",
+        "ap_disconnect": "Autopilot disconnected.",
+        "lnav_push": "LNAV engaged.",
+        "vnav_push": "VNAV engaged.",
+        "app_push": "Approach mode armed."
+    }
+}

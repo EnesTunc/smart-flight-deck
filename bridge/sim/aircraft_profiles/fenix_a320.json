@@ -1,0 +1,307 @@
+{
+    "name": "Fenix A320",
+    "description": "Fenix Simulations Airbus A320 - LVAR support",
+    "version": "1.0.0",
+    "author": "Smart Flight Deck",
+    "aircraft_url": "https://fenixsim.com/",
+    "detection": {
+        "title_contains": ["Fenix", "A320"],
+        "livery_contains": []
+    },
+    "features": {
+        "lvar_support": true,
+        "fcu_control": true,
+        "mcdu_control": false,
+        "realistic_startup": true,
+        "custom_lights": true,
+        "efb_control": false,
+        "fenix_api": true
+    },
+    "notes": "Fenix uses 'S_' prefix for switch LVARs and 'I_' for indicator LVARs",
+    "commands": {
+        "gear_up": {
+            "type": "simconnect",
+            "event": "GEAR_UP"
+        },
+        "gear_down": {
+            "type": "simconnect",
+            "event": "GEAR_DOWN"
+        },
+        "flaps_set": {
+            "type": "lvar",
+            "lvar": "S_FC_FLAP_LEVER",
+            "action": "set",
+            "value_map": {
+                "0": 0,
+                "1": 1,
+                "2": 2,
+                "3": 3,
+                "full": 4
+            }
+        },
+        "spoilers_arm": {
+            "type": "lvar",
+            "lvar": "S_FC_SPLR_ARM",
+            "action": "toggle"
+        },
+        "parking_brake_toggle": {
+            "type": "lvar",
+            "lvar": "S_FC_PARK_BRAKE",
+            "action": "toggle"
+        },
+
+        "fcu_speed_set": {
+            "type": "lvar",
+            "lvar": "S_FCU_SPEED",
+            "action": "set"
+        },
+        "fcu_speed_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_SPEED_PUSH",
+            "action": "set",
+            "value": 1
+        },
+        "fcu_speed_pull": {
+            "type": "lvar",
+            "lvar": "S_FCU_SPEED_PULL",
+            "action": "set",
+            "value": 1
+        },
+        "fcu_heading_set": {
+            "type": "lvar",
+            "lvar": "S_FCU_HEADING",
+            "action": "set"
+        },
+        "fcu_heading_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_HEADING_PUSH",
+            "action": "set",
+            "value": 1
+        },
+        "fcu_heading_pull": {
+            "type": "lvar",
+            "lvar": "S_FCU_HEADING_PULL",
+            "action": "set",
+            "value": 1
+        },
+        "fcu_altitude_set": {
+            "type": "lvar",
+            "lvar": "S_FCU_ALTITUDE",
+            "action": "set"
+        },
+        "fcu_altitude_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_ALTITUDE_PUSH",
+            "action": "set",
+            "value": 1
+        },
+        "fcu_altitude_pull": {
+            "type": "lvar",
+            "lvar": "S_FCU_ALTITUDE_PULL",
+            "action": "set",
+            "value": 1
+        },
+        "fcu_vs_set": {
+            "type": "lvar",
+            "lvar": "S_FCU_VS",
+            "action": "set"
+        },
+        "fcu_vs_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_VS_PUSH",
+            "action": "set",
+            "value": 1
+        },
+        "fcu_vs_pull": {
+            "type": "lvar",
+            "lvar": "S_FCU_VS_PULL",
+            "action": "set",
+            "value": 1
+        },
+
+        "ap1_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_AP1",
+            "action": "set",
+            "value": 1
+        },
+        "ap2_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_AP2",
+            "action": "set",
+            "value": 1
+        },
+        "athr_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_ATHR",
+            "action": "set",
+            "value": 1
+        },
+        "loc_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_LOC",
+            "action": "set",
+            "value": 1
+        },
+        "appr_push": {
+            "type": "lvar",
+            "lvar": "S_FCU_APPR",
+            "action": "set",
+            "value": 1
+        },
+
+        "landing_lights_on": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_LANDING_L",
+            "action": "set",
+            "value": 2
+        },
+        "landing_lights_off": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_LANDING_L",
+            "action": "set",
+            "value": 0
+        },
+        "strobe_lights_on": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_STROBE",
+            "action": "set",
+            "value": 2
+        },
+        "strobe_lights_auto": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_STROBE",
+            "action": "set",
+            "value": 1
+        },
+        "strobe_lights_off": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_STROBE",
+            "action": "set",
+            "value": 0
+        },
+        "beacon_lights_toggle": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_BEACON",
+            "action": "toggle"
+        },
+        "nav_lights_set": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_NAV_LOGO",
+            "action": "set",
+            "value_map": {
+                "off": 0,
+                "1": 1,
+                "2": 2
+            }
+        },
+        "runway_turnoff_lights_toggle": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_RWY_TURNOFF",
+            "action": "toggle"
+        },
+        "nose_light_set": {
+            "type": "lvar",
+            "lvar": "S_OH_EXT_LT_NOSE",
+            "action": "set",
+            "value_map": {
+                "off": 0,
+                "taxi": 1,
+                "takeoff": 2
+            }
+        },
+
+        "seatbelt_sign_toggle": {
+            "type": "lvar",
+            "lvar": "S_OH_SIGNS_SEATBELTS",
+            "action": "toggle"
+        },
+        "no_smoking_sign_toggle": {
+            "type": "lvar",
+            "lvar": "S_OH_SIGNS_NO_SMOKING",
+            "action": "toggle"
+        },
+
+        "apu_master_toggle": {
+            "type": "lvar",
+            "lvar": "S_OH_ELEC_APU_MASTER",
+            "action": "toggle"
+        },
+        "apu_start": {
+            "type": "lvar",
+            "lvar": "S_OH_ELEC_APU_START",
+            "action": "set",
+            "value": 1
+        },
+
+        "engine_mode_set": {
+            "type": "lvar",
+            "lvar": "S_ENG_MODE",
+            "action": "set",
+            "value_map": {
+                "crank": 0,
+                "norm": 1,
+                "ign": 2
+            }
+        },
+        "engine1_master_toggle": {
+            "type": "lvar",
+            "lvar": "S_ENG_MASTER_1",
+            "action": "toggle"
+        },
+        "engine2_master_toggle": {
+            "type": "lvar",
+            "lvar": "S_ENG_MASTER_2",
+            "action": "toggle"
+        }
+    },
+    "variables": {
+        "gear_position": {
+            "type": "simvar",
+            "name": "GEAR_HANDLE_POSITION",
+            "unit": "Bool"
+        },
+        "flaps_position": {
+            "type": "lvar",
+            "lvar": "I_FC_FLAP_LEVER"
+        },
+        "fcu_speed": {
+            "type": "lvar",
+            "lvar": "I_FCU_SPEED"
+        },
+        "fcu_heading": {
+            "type": "lvar",
+            "lvar": "I_FCU_HEADING"
+        },
+        "fcu_altitude": {
+            "type": "lvar",
+            "lvar": "I_FCU_ALTITUDE"
+        },
+        "fcu_vs": {
+            "type": "lvar",
+            "lvar": "I_FCU_VS"
+        },
+        "ap1_active": {
+            "type": "lvar",
+            "lvar": "I_FCU_AP1_LED"
+        },
+        "ap2_active": {
+            "type": "lvar",
+            "lvar": "I_FCU_AP2_LED"
+        },
+        "athr_active": {
+            "type": "lvar",
+            "lvar": "I_FCU_ATHR_LED"
+        }
+    },
+    "responses": {
+        "gear_down": "Gear down, three green.",
+        "gear_up": "Gear up.",
+        "flaps_set": "Flaps {value}.",
+        "spoilers_arm": "Speed brake armed.",
+        "ap1_push": "Autopilot one engaged.",
+        "ap2_push": "Autopilot two engaged.",
+        "athr_push": "Autothrust {state}.",
+        "appr_push": "Approach mode armed."
+    }
+}

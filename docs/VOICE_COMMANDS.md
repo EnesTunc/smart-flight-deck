@@ -1,6 +1,6 @@
 # Smart Flight Deck Companion - Voice Commands Reference
 
-> **Toplam:** 70+ sesli komut
+> **Toplam:** 90+ sesli komut (70 kontrol + 20 checklist)
 
 ---
 
@@ -163,6 +163,43 @@
 
 ---
 
+## Checklist Commands ✅
+
+### Checklist Başlatma
+
+| Komut | Alternatifler | Yanit |
+|-------|---------------|-------|
+| "Before start checklist" | "Start before start checklist" | "Before Start checklist. Parking brake." |
+| "Before taxi checklist" | "Run before taxi checklist" | "Before Taxi checklist. Flight controls." |
+| "Before takeoff checklist" | "Takeoff checklist" | "Before Takeoff checklist. Flight controls." |
+| "After takeoff checklist" | - | "After Takeoff checklist. Landing gear." |
+| "Approach checklist" | - | "Approach checklist. Approach briefing." |
+| "Before landing checklist" | "Landing checklist" | "Before Landing checklist. Landing gear." |
+| "After landing checklist" | - | "After Landing checklist. Spoilers." |
+| "Shutdown checklist" | - | "Shutdown checklist. Parking brake." |
+| "Cockpit preparation checklist" | "Cockpit prep checklist" | "Cockpit Preparation checklist. Battery 1." |
+
+### Checklist Yanıtları
+
+| Komut | Alternatifler | Aksiyon |
+|-------|---------------|---------|
+| "Check" | "Checked", "Set", "Confirm", "Confirmed" | Maddeyi onayla |
+| "Skip" | "Next", "Next item" | Maddeyi atla |
+| "Repeat" | "Again", "Say again" | Maddeyi tekrarla |
+| "Override" | - | Başarısız doğrulamayı geç |
+
+### Checklist Kontrol
+
+| Komut | Alternatifler | Aksiyon |
+|-------|---------------|---------|
+| "Pause checklist" | "Hold checklist" | Checklist'i duraklat |
+| "Resume checklist" | "Continue checklist" | Checklist'e devam et |
+| "Cancel checklist" | "Stop checklist", "Abort checklist" | Checklist'i iptal et |
+| "Checklist status" | "What's the current item?" | Mevcut maddeyi söyle |
+| "List checklists" | - | Mevcut checklistleri listele |
+
+---
+
 ## Best Practices
 
 ### Clear Commands
@@ -214,4 +251,4 @@ CommandRegistry.register(
 
 ---
 
-*Last updated: 2024*
+*Last updated: 2025-01*

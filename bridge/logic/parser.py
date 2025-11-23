@@ -119,6 +119,34 @@ class CommandParser:
         (r"(what('?s| is) (the |my |our )?)?(current )?altitude", "query_altitude", {}),
         (r"(what('?s| is) (the |my |our )?)?(current )?heading", "query_heading", {}),
         (r"(how much )?fuel (remaining|left)?", "query_fuel", {}),
+        # Checklist commands
+        (r"(start |run |begin )?(before start|before engine) checklist", "checklist_start", {"checklist": "before_start"}),
+        (r"(start |run |begin )?(after start) checklist", "checklist_start", {"checklist": "after_start"}),
+        (r"(start |run |begin )?(before taxi) checklist", "checklist_start", {"checklist": "before_taxi"}),
+        (r"(start |run |begin )?(before takeoff|takeoff) checklist", "checklist_start", {"checklist": "before_takeoff"}),
+        (r"(start |run |begin )?(after takeoff) checklist", "checklist_start", {"checklist": "after_takeoff"}),
+        (r"(start |run |begin )?(approach) checklist", "checklist_start", {"checklist": "approach"}),
+        (r"(start |run |begin )?(before landing|landing) checklist", "checklist_start", {"checklist": "before_landing"}),
+        (r"(start |run |begin )?(after landing) checklist", "checklist_start", {"checklist": "after_landing"}),
+        (r"(start |run |begin )?(shutdown) checklist", "checklist_start", {"checklist": "shutdown"}),
+        (r"(start |run |begin )?(cockpit prep(aration)?) checklist", "checklist_start", {"checklist": "cockpit_preparation"}),
+        (r"(start |run |begin )?checklist (.+)", "checklist_start", {"checklist": "group2"}),
+        # Checklist responses
+        (r"^check(ed)?$", "checklist_check", {}),
+        (r"^set$", "checklist_check", {}),
+        (r"^confirm(ed)?$", "checklist_check", {}),
+        (r"^skip$", "checklist_skip", {}),
+        (r"^next( item)?$", "checklist_skip", {}),
+        (r"^repeat$", "checklist_repeat", {}),
+        (r"^(say )?again$", "checklist_repeat", {}),
+        (r"^override$", "checklist_override", {}),
+        # Checklist control
+        (r"(pause|hold) checklist", "checklist_pause", {}),
+        (r"(resume|continue) checklist", "checklist_resume", {}),
+        (r"(cancel|stop|abort) checklist", "checklist_cancel", {}),
+        (r"(what('?s| is) (the )?)?(current |next )?item", "checklist_status", {}),
+        (r"checklist status", "checklist_status", {}),
+        (r"list checklists?", "checklist_list", {}),
     ]
 
     def __init__(self):
@@ -183,6 +211,7 @@ class CommandParser:
             List of suggested commands
         """
         suggestions = [
+            # Basic controls
             "gear down",
             "gear up",
             "flaps 1",
@@ -191,6 +220,18 @@ class CommandParser:
             "landing lights on",
             "parking brake",
             "spoilers arm",
+            # Checklists
+            "before start checklist",
+            "before takeoff checklist",
+            "after takeoff checklist",
+            "approach checklist",
+            "before landing checklist",
+            "after landing checklist",
+            "shutdown checklist",
+            "check",
+            "skip",
+            "pause checklist",
+            "cancel checklist",
         ]
 
         partial_lower = partial_text.lower()

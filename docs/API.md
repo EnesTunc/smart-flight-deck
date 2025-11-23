@@ -180,6 +180,244 @@ Execute a direct simulator command.
 
 ---
 
+### WASM / MobiFlight ✅
+
+#### GET /api/wasm/status
+Get MobiFlight WASM module status.
+
+**Response:**
+```json
+{
+  "installed": true,
+  "path": "C:\\Users\\...\\Community\\mobiflight-event-module",
+  "version": "0.7.0"
+}
+```
+
+#### POST /api/wasm/install
+Automatically install MobiFlight WASM module.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "MobiFlight WASM module installed"
+}
+```
+
+#### GET /api/wasm/msfs-paths
+Get MSFS Community folder paths.
+
+**Response:**
+```json
+{
+  "steam": "C:\\Users\\...\\AppData\\Roaming\\Microsoft Flight Simulator\\Packages\\Community",
+  "msstore": null,
+  "detected": "steam"
+}
+```
+
+---
+
+### Aircraft Profiles ✅
+
+#### GET /api/aircraft/profile
+Get current aircraft profile.
+
+**Response:**
+```json
+{
+  "aircraft": "FlyByWire A32NX",
+  "profile": "fbw_a32nx",
+  "lvar_support": true,
+  "fcu_support": true
+}
+```
+
+#### GET /api/aircraft/profiles
+List all available profiles.
+
+**Response:**
+```json
+{
+  "profiles": ["default", "fbw_a32nx", "fenix_a320", "pmdg_737"]
+}
+```
+
+---
+
+### Context Engine ✅
+
+#### GET /api/context/status
+Get current flight context.
+
+**Response:**
+```json
+{
+  "phase": "CRUISE",
+  "altitude": 35000,
+  "altitude_agl": 35000,
+  "speed": 280,
+  "vertical_speed": 0,
+  "on_ground": false,
+  "gear_down": false,
+  "flaps_position": 0,
+  "aircraft_category": "AIRLINER"
+}
+```
+
+#### GET /api/context/phase
+Get detailed flight phase info.
+
+**Response:**
+```json
+{
+  "phase": "CRUISE",
+  "phase_name": "Cruise",
+  "is_critical": false,
+  "duration_seconds": 1234
+}
+```
+
+#### POST /api/context/evaluate
+Evaluate a command for safety.
+
+**Body:**
+```json
+{
+  "command": "gear_down"
+}
+```
+
+**Response:**
+```json
+{
+  "allowed": true,
+  "action": "WARN",
+  "warning": "Speed is high (280kt), extending gear",
+  "tts_response": "Speed is high, extending gear"
+}
+```
+
+#### GET /api/context/limits
+Get current V-speed limits.
+
+**Response:**
+```json
+{
+  "vmo": 350,
+  "mmo": 0.82,
+  "vlo": 250,
+  "vle": 280,
+  "vfe": [230, 200, 185, 177]
+}
+```
+
+---
+
+### Checklist System ✅
+
+#### GET /api/checklist/list
+List available checklists for current aircraft.
+
+**Response:**
+```json
+{
+  "aircraft": "FlyByWire A32NX",
+  "checklists": [
+    {"id": "before_start", "name": "Before Start", "phase": "PREFLIGHT", "items_count": 5},
+    {"id": "before_takeoff", "name": "Before Takeoff", "phase": "TAXI", "items_count": 7}
+  ]
+}
+```
+
+#### POST /api/checklist/start/{checklist_id}
+Start a checklist.
+
+**Response:**
+```json
+{
+  "success": true,
+  "state": "WAITING",
+  "tts_text": "Before Takeoff checklist. Flight controls.",
+  "current_item": {
+    "id": "flight_controls",
+    "challenge": "Flight controls",
+    "expected": "Checked",
+    "critical": true
+  },
+  "progress": 0.0,
+  "items_remaining": 7
+}
+```
+
+#### GET /api/checklist/status
+Get active checklist status.
+
+**Response:**
+```json
+{
+  "active": true,
+  "checklist": "before_takeoff",
+  "state": "WAITING",
+  "current_item": {...},
+  "progress": 42.8,
+  "items_remaining": 4
+}
+```
+
+#### POST /api/checklist/response
+Send a response to current item.
+
+**Body:**
+```json
+{
+  "response": "check"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "state": "WAITING",
+  "tts_text": "Checked. Flaps.",
+  "verified": true,
+  "current_item": {...},
+  "progress": 14.3,
+  "items_remaining": 6
+}
+```
+
+**Available Responses:**
+| Response | Action |
+|----------|--------|
+| `check` | Confirm current item |
+| `skip` | Skip current item |
+| `override` | Override failed verification |
+| `repeat` | Repeat current item |
+
+#### POST /api/checklist/pause
+Pause active checklist.
+
+#### POST /api/checklist/resume
+Resume paused checklist.
+
+#### POST /api/checklist/cancel
+Cancel active checklist.
+
+#### POST /api/checklist/set-aircraft
+Set aircraft for checklist selection.
+
+**Body:**
+```json
+{
+  "aircraft": "FlyByWire A32NX"
+}
+```
+
+---
+
 ## WebSocket
 
 ### WS /ws/stream/{session_token}
