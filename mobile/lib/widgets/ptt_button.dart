@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/bridge_provider.dart';
 import '../services/audio_service.dart';
-import '../services/bridge_service.dart';
 import '../theme/app_theme.dart';
 
 /// Push-to-Talk button for voice commands.
-class PTTButton extends StatefulWidget {
+class PTTButton extends ConsumerStatefulWidget {
   const PTTButton({super.key});
 
   @override
-  State<PTTButton> createState() => _PTTButtonState();
+  ConsumerState<PTTButton> createState() => _PTTButtonState();
 }
 
-class _PTTButtonState extends State<PTTButton> with SingleTickerProviderStateMixin {
+class _PTTButtonState extends ConsumerState<PTTButton>
+    with SingleTickerProviderStateMixin {
   final AudioService _audioService = AudioService();
-  final BridgeService _bridgeService = BridgeService();
 
   bool _isRecording = false;
   bool _isProcessing = false;
+  String? _lastResult;
   late AnimationController _pulseController;
 
   @override
@@ -38,24 +40,42 @@ class _PTTButtonState extends State<PTTButton> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final isConnected = ref.watch(isConnectedProvider);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Status text
         Text(
-          _isRecording
-              ? 'Listening...'
-              : _isProcessing
-                  ? 'Processing...'
-                  : 'Hold to speak',
-          style: Theme.of(context).textTheme.bodyMedium,
+          _getStatusText(isConnected),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: _isRecording
+                    ? AppTheme.errorColor
+                    : _isProcessing
+                        ? AppTheme.warningColor
+                        : isConnected
+                            ? AppTheme.textSecondary
+                            : AppTheme.textMuted,
+              ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+
+        // Last result
+        if (_lastResult != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              _lastResult!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.primaryColor,
+                  ),
+            ),
+          ),
 
         // PTT Button
         GestureDetector(
-          onLongPressStart: (_) => _startRecording(),
-          onLongPressEnd: (_) => _stopRecording(),
+          onLongPressStart: isConnected ? (_) => _startRecording() : null,
+          onLongPressEnd: isConnected ? (_) => _stopRecording() : null,
           onLongPressCancel: () => _cancelRecording(),
           child: AnimatedBuilder(
             animation: _pulseController,
@@ -71,16 +91,14 @@ class _PTTButtonState extends State<PTTButton> with SingleTickerProviderStateMix
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isRecording
-                        ? AppTheme.errorColor
-                        : _isProcessing
-                            ? AppTheme.warningColor
-                            : AppTheme.primaryColor,
+                    color: _getButtonColor(isConnected),
                     boxShadow: [
                       BoxShadow(
                         color: (_isRecording
                                 ? AppTheme.errorColor
-                                : AppTheme.primaryColor)
+                                : isConnected
+                                    ? AppTheme.primaryColor
+                                    : AppTheme.textMuted)
                             .withOpacity(0.5),
                         blurRadius: _isRecording ? 20 : 10,
                         spreadRadius: _isRecording ? 5 : 2,
@@ -88,13 +106,11 @@ class _PTTButtonState extends State<PTTButton> with SingleTickerProviderStateMix
                     ],
                   ),
                   child: Icon(
-                    _isRecording
-                        ? Icons.mic
-                        : _isProcessing
-                            ? Icons.hourglass_top
-                            : Icons.mic_none,
+                    _getButtonIcon(),
                     size: 48,
-                    color: AppTheme.backgroundColor,
+                    color: isConnected
+                        ? AppTheme.backgroundColor
+                        : AppTheme.textMuted,
                   ),
                 ),
               );
@@ -105,9 +121,33 @@ class _PTTButtonState extends State<PTTButton> with SingleTickerProviderStateMix
     );
   }
 
+  String _getStatusText(bool isConnected) {
+    if (!isConnected) return 'Connect to use voice';
+    if (_isRecording) return 'Listening...';
+    if (_isProcessing) return 'Processing...';
+    return 'Hold to speak';
+  }
+
+  Color _getButtonColor(bool isConnected) {
+    if (!isConnected) return AppTheme.surfaceColor;
+    if (_isRecording) return AppTheme.errorColor;
+    if (_isProcessing) return AppTheme.warningColor;
+    return AppTheme.primaryColor;
+  }
+
+  IconData _getButtonIcon() {
+    if (_isRecording) return Icons.mic;
+    if (_isProcessing) return Icons.hourglass_top;
+    return Icons.mic_none;
+  }
+
   Future<void> _startRecording() async {
     // Haptic feedback
     HapticFeedback.mediumImpact();
+
+    setState(() {
+      _lastResult = null;
+    });
 
     try {
       await _audioService.startRecording();
@@ -135,7 +175,20 @@ class _PTTButtonState extends State<PTTButton> with SingleTickerProviderStateMix
 
       if (audioData != null && audioData.isNotEmpty) {
         // Send to bridge for processing
-        final result = await _bridgeService.sendAudioCommand(audioData);
+        final result = await ref
+            .read(bridgeProvider.notifier)
+            .sendAudioCommand(audioData);
+
+        setState(() {
+          _lastResult = result.success
+              ? '"${result.command}" → ${result.message}'
+              : result.message;
+        });
+
+        // Play TTS response if available
+        if (result.ttsAudio != null) {
+          await _audioService.playAudioBase64(result.ttsAudio!);
+        }
 
         if (!result.success) {
           _showError(result.message);
@@ -160,6 +213,7 @@ class _PTTButtonState extends State<PTTButton> with SingleTickerProviderStateMix
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

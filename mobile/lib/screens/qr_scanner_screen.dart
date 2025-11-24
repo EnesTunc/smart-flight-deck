@@ -1,23 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../services/bridge_service.dart';
+import '../providers/bridge_provider.dart';
 import '../theme/app_theme.dart';
 
-class QRScannerScreen extends StatefulWidget {
-  final VoidCallback onConnected;
-
-  const QRScannerScreen({
-    super.key,
-    required this.onConnected,
-  });
+class QRScannerScreen extends ConsumerStatefulWidget {
+  const QRScannerScreen({super.key});
 
   @override
-  State<QRScannerScreen> createState() => _QRScannerScreenState();
+  ConsumerState<QRScannerScreen> createState() => _QRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> {
+class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
   final MobileScannerController _controller = MobileScannerController();
   bool _isProcessing = false;
   String? _errorMessage;
@@ -30,6 +26,19 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for connection state changes
+    ref.listen<BridgeConnectionState>(bridgeProvider, (previous, next) {
+      if (next.status == ConnectionStatus.connected) {
+        // Successfully connected - go back
+        Navigator.of(context).pop();
+      } else if (next.status == ConnectionStatus.error) {
+        setState(() {
+          _errorMessage = next.errorMessage ?? 'Connection failed';
+          _isProcessing = false;
+        });
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan QR Code'),
@@ -44,6 +53,19 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               },
             ),
             onPressed: () => _controller.toggleTorch(),
+          ),
+          IconButton(
+            icon: ValueListenableBuilder<CameraFacing>(
+              valueListenable: _controller.cameraFacingState,
+              builder: (context, state, child) {
+                return Icon(
+                  state == CameraFacing.front
+                      ? Icons.camera_front
+                      : Icons.camera_rear,
+                );
+              },
+            ),
+            onPressed: () => _controller.switchCamera(),
           ),
         ],
       ),
@@ -63,7 +85,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                     height: 250,
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: AppTheme.primaryColor,
+                        color: _isProcessing
+                            ? AppTheme.warningColor
+                            : AppTheme.primaryColor,
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(12),
@@ -75,7 +99,20 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                   Container(
                     color: Colors.black54,
                     child: const Center(
-                      child: CircularProgressIndicator(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Connecting...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
@@ -104,6 +141,15 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                             style: const TextStyle(color: AppTheme.errorColor),
                           ),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: AppTheme.errorColor),
+                          onPressed: () {
+                            setState(() {
+                              _errorMessage = null;
+                            });
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -117,8 +163,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Make sure both devices are on the same Wi-Fi network',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textMuted,
+                      ),
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                // Manual connection option
+                TextButton.icon(
+                  onPressed: _showManualConnectionDialog,
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Enter IP manually'),
                 ),
               ],
             ),
@@ -146,17 +201,83 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       final port = data['port'] as int;
       final sessionToken = data['session_token'] as String;
 
-      // Try to connect
-      final bridgeService = BridgeService();
-      await bridgeService.connect(ip, port, sessionToken);
-
-      // Success!
-      widget.onConnected();
+      // Try to connect using provider
+      await ref.read(bridgeProvider.notifier).connect(ip, port, sessionToken);
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to connect: ${e.toString()}';
+        _errorMessage = 'Invalid QR code: ${e.toString()}';
         _isProcessing = false;
       });
     }
+  }
+
+  void _showManualConnectionDialog() {
+    final ipController = TextEditingController();
+    final portController = TextEditingController(text: '8000');
+    final tokenController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: const Text('Manual Connection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: ipController,
+              decoration: const InputDecoration(
+                labelText: 'IP Address',
+                hintText: '192.168.1.100',
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: portController,
+              decoration: const InputDecoration(
+                labelText: 'Port',
+                hintText: '8080',
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: tokenController,
+              decoration: const InputDecoration(
+                labelText: 'Session Token',
+                hintText: 'From PC Bridge',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final ip = ipController.text.trim();
+              final port = int.tryParse(portController.text.trim()) ?? 8080;
+              final token = tokenController.text.trim();
+
+              if (ip.isNotEmpty && token.isNotEmpty) {
+                Navigator.pop(context);
+                setState(() {
+                  _isProcessing = true;
+                  _errorMessage = null;
+                });
+
+                await ref
+                    .read(bridgeProvider.notifier)
+                    .connect(ip, port, token);
+              }
+            },
+            child: const Text('Connect'),
+          ),
+        ],
+      ),
+    );
   }
 }

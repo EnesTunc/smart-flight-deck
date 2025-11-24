@@ -14,18 +14,53 @@ logger = logging.getLogger(__name__)
 class AircraftState:
     """Current aircraft state data."""
 
+    # Connection status
     connected: bool = False
+
+    # Aircraft info
     aircraft_title: str = ""
-    on_ground: bool = True
-    altitude: float = 0.0  # feet
+
+    # Position
+    latitude: float = 0.0
+    longitude: float = 0.0
+    altitude: float = 0.0  # feet MSL
+    altitude_agl: float = 0.0  # feet AGL
+    heading: float = 0.0  # degrees true
+    track: float = 0.0  # degrees GPS ground track
+
+    # Speed
     indicated_airspeed: float = 0.0  # knots
+    true_airspeed: float = 0.0  # knots
     ground_speed: float = 0.0  # knots
-    heading: float = 0.0  # degrees
+    mach: float = 0.0
     vertical_speed: float = 0.0  # feet per minute
+
+    # Aircraft systems
+    on_ground: bool = True
     gear_handle_position: int = 0  # 0=up, 1=down
     flaps_handle_index: int = 0  # 0-4 typically
+    spoilers_armed: bool = False
     parking_brake: bool = False
     engine_running: bool = False
+
+    # Fuel
+    fuel_total_kg: float = 0.0
+    fuel_flow_kg_h: float = 0.0
+    fuel_percent: float = 0.0
+
+    # Navigation
+    nav1_freq: float = 0.0
+    nav1_ident: str = ""
+    nav1_dme: float = 0.0
+    nav2_freq: float = 0.0
+    nav2_ident: str = ""
+    nav2_dme: float = 0.0
+
+    # Environment
+    wind_direction: float = 0.0  # degrees
+    wind_speed: float = 0.0  # knots
+    oat: float = 0.0  # celsius
+    qnh: float = 1013.0  # millibars
 
 
 class SimConnection:
@@ -88,25 +123,102 @@ class SimConnection:
         try:
             ar = self._aircraft_requests
 
+            # Get aircraft title and decode if bytes
+            title = ar.get("TITLE") or "Unknown"
+            if isinstance(title, bytes):
+                title = title.decode('utf-8', errors='ignore')
+
+            # Helper function to safely decode string values
+            def decode_str(value, default=""):
+                if value is None:
+                    return default
+                if isinstance(value, bytes):
+                    return value.decode('utf-8', errors='ignore')
+                return str(value)
+
+            # Helper function to safely get float values
+            def get_float(name, default=0.0):
+                try:
+                    val = ar.get(name)
+                    return float(val) if val is not None else default
+                except (TypeError, ValueError):
+                    return default
+
+            # Helper function to safely get int values
+            def get_int(name, default=0):
+                try:
+                    val = ar.get(name)
+                    return int(val) if val is not None else default
+                except (TypeError, ValueError):
+                    return default
+
+            # Convert fuel from gallons to kg (approximate with Jet-A density 3.0 kg/gal)
+            fuel_gallons = get_float("FUEL_TOTAL_QUANTITY")
+            fuel_kg = fuel_gallons * 3.0
+
+            # Convert fuel flow from gallons/hour to kg/hour
+            # Sum both engines if available
+            fuel_flow_gph = get_float("ENG_FUEL_FLOW_GPH:1") + get_float("ENG_FUEL_FLOW_GPH:2")
+            fuel_flow_kg_h = fuel_flow_gph * 3.0
+
+            # Convert barometer from inHg to millibars
+            baro_inhg = get_float("KOHLSMAN_SETTING_HG", 29.92)
+            qnh_mbar = baro_inhg * 33.8639
+
             self._aircraft_state = AircraftState(
                 connected=True,
-                aircraft_title=str(ar.get("TITLE") or "Unknown"),
+                aircraft_title=str(title),
+
+                # Position
+                latitude=get_float("PLANE_LATITUDE"),
+                longitude=get_float("PLANE_LONGITUDE"),
+                altitude=get_float("PLANE_ALTITUDE"),
+                altitude_agl=get_float("PLANE_ALT_ABOVE_GROUND"),
+                heading=get_float("PLANE_HEADING_DEGREES_TRUE"),
+                track=get_float("GPS_GROUND_TRUE_TRACK"),
+
+                # Speed
+                indicated_airspeed=get_float("AIRSPEED_INDICATED"),
+                true_airspeed=get_float("AIRSPEED_TRUE"),
+                ground_speed=get_float("GROUND_VELOCITY"),
+                mach=get_float("AIRSPEED_MACH"),
+                vertical_speed=get_float("VERTICAL_SPEED"),
+
+                # Aircraft systems
                 on_ground=bool(ar.get("SIM_ON_GROUND")),
-                altitude=float(ar.get("PLANE_ALTITUDE") or 0),
-                indicated_airspeed=float(ar.get("AIRSPEED_INDICATED") or 0),
-                ground_speed=float(ar.get("GROUND_VELOCITY") or 0),
-                heading=float(ar.get("PLANE_HEADING_DEGREES_TRUE") or 0),
-                vertical_speed=float(ar.get("VERTICAL_SPEED") or 0),
-                gear_handle_position=int(ar.get("GEAR_HANDLE_POSITION") or 0),
-                flaps_handle_index=int(ar.get("FLAPS_HANDLE_INDEX") or 0),
+                gear_handle_position=get_int("GEAR_HANDLE_POSITION"),
+                flaps_handle_index=get_int("FLAPS_HANDLE_INDEX"),
+                spoilers_armed=bool(ar.get("SPOILERS_ARMED")),
                 parking_brake=bool(ar.get("BRAKE_PARKING_INDICATOR")),
                 engine_running=bool(ar.get("ENG_COMBUSTION:1")),
+
+                # Fuel
+                fuel_total_kg=fuel_kg,
+                fuel_flow_kg_h=fuel_flow_kg_h,
+                fuel_percent=get_float("FUEL_TOTAL_CAPACITY_PERCENT"),
+
+                # Navigation
+                nav1_freq=get_float("NAV_ACTIVE_FREQUENCY:1"),
+                nav1_ident=decode_str(ar.get("NAV_IDENT:1")),
+                nav1_dme=get_float("NAV_DME:1"),
+                nav2_freq=get_float("NAV_ACTIVE_FREQUENCY:2"),
+                nav2_ident=decode_str(ar.get("NAV_IDENT:2")),
+                nav2_dme=get_float("NAV_DME:2"),
+
+                # Environment
+                wind_direction=get_float("AMBIENT_WIND_DIRECTION"),
+                wind_speed=get_float("AMBIENT_WIND_VELOCITY"),
+                oat=get_float("AMBIENT_TEMPERATURE"),
+                qnh=qnh_mbar,
             )
 
             return self._aircraft_state
 
         except Exception as e:
             logger.error(f"Error updating state: {e}")
+            # Connection lost - reset state
+            self._connected = False
+            self._aircraft_state = AircraftState(connected=False)
             return self._aircraft_state
 
     def send_event(self, event_name: str, value: int = 0) -> bool:

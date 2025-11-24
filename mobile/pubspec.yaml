@@ -26,8 +26,8 @@ dependencies:
   web_socket_channel: ^2.4.0
 
   # Audio Recording & Playback
-  record: ^5.0.4
-  audioplayers: ^5.2.1
+  record: ^6.0.0
+  audioplayers: ^6.0.0
 
   # QR Code
   mobile_scanner: ^3.5.5

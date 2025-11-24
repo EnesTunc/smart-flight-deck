@@ -88,21 +88,98 @@ async def websocket_endpoint(websocket: WebSocket, session_token: str):
 
 async def stream_sim_data(session_token: str):
     """Stream simulator data to client at regular intervals."""
+    from .routes import get_sim_connection, try_connect_sim
+
+    # Try initial connection
+    sim = get_sim_connection()
+    if not sim.is_connected:
+        try_connect_sim()
+
     while True:
         try:
-            # TODO: Get actual SimConnect data
-            sim_data = {
-                "type": "sim_data",
-                "data": {
-                    "connected": False,
-                    "altitude": 0,
-                    "speed": 0,
-                    "heading": 0,
-                    "gear_position": 0,
-                    "flaps_position": 0,
-                    "on_ground": True,
-                },
-            }
+            sim = get_sim_connection()
+
+            if sim.is_connected:
+                state = sim.update_state()
+
+                # Calculate fuel endurance
+                fuel_endurance_min = 0
+                if state.fuel_flow_kg_h > 0:
+                    fuel_endurance_min = int((state.fuel_total_kg / state.fuel_flow_kg_h) * 60)
+
+                # Build nested data structure matching MOBILE_DESIGN.md format
+                sim_data = {
+                    "type": "sim_data",
+                    "data": {
+                        "connected": True,
+                        "sim_connected": True,
+                        "on_ground": state.on_ground,
+                        "aircraft": state.aircraft_title,
+                        "flight_phase": None,  # TODO: Get from context engine
+
+                        # Nested position data
+                        "position": {
+                            "latitude": state.latitude,
+                            "longitude": state.longitude,
+                            "altitude_msl": state.altitude,
+                            "altitude_agl": state.altitude_agl,
+                            "heading": state.heading,
+                            "track": state.track,
+                        },
+
+                        # Nested speed data
+                        "speed": {
+                            "indicated": state.indicated_airspeed,
+                            "true": state.true_airspeed,
+                            "ground": state.ground_speed,
+                            "mach": state.mach,
+                            "vertical": state.vertical_speed,
+                        },
+
+                        # Nested aircraft data
+                        "aircraft": {
+                            "title": state.aircraft_title,
+                            "gear_position": state.gear_handle_position,
+                            "flaps_index": state.flaps_handle_index,
+                            "spoilers_armed": state.spoilers_armed,
+                        },
+
+                        # Nested fuel data
+                        "fuel": {
+                            "total_kg": state.fuel_total_kg,
+                            "flow_kg_h": state.fuel_flow_kg_h,
+                            "endurance_min": fuel_endurance_min,
+                        },
+                        "fuel_percent": state.fuel_percent,
+
+                        # Nested navigation data
+                        "navigation": {
+                            "nav1_freq": state.nav1_freq,
+                            "nav1_ident": state.nav1_ident,
+                            "nav1_dme": state.nav1_dme,
+                            "nav2_freq": state.nav2_freq,
+                            "nav2_ident": state.nav2_ident,
+                            "nav2_dme": state.nav2_dme,
+                        },
+
+                        # Nested environment data
+                        "environment": {
+                            "wind_direction": state.wind_direction,
+                            "wind_speed": state.wind_speed,
+                            "oat": state.oat,
+                            "qnh": state.qnh,
+                        },
+                    },
+                }
+            else:
+                # Not connected - send minimal data
+                sim_data = {
+                    "type": "sim_data",
+                    "data": {
+                        "connected": False,
+                        "sim_connected": False,
+                    },
+                }
 
             await manager.send_personal(session_token, sim_data)
             await asyncio.sleep(0.5)  # 2 Hz update rate
@@ -111,7 +188,7 @@ async def stream_sim_data(session_token: str):
             break
         except Exception as e:
             logger.error(f"Sim data stream error: {e}")
-            break
+            await asyncio.sleep(1.0)  # Wait before retrying
 
 
 async def handle_client_message(session_token: str, message: dict):

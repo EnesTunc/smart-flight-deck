@@ -15,7 +15,7 @@ class AppConstants {
   // ===========================================
 
   /// Default PC Bridge port
-  static const int defaultPort = 8080;
+  static const int defaultPort = 8000;
 
   /// WebSocket reconnect delay (ms)
   static const int wsReconnectDelay = 3000;

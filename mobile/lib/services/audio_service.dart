@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -36,14 +37,15 @@ class AudioService {
 
     // Get temp directory for recording
     final directory = await getTemporaryDirectory();
-    _currentRecordingPath = '${directory.path}/command_${DateTime.now().millisecondsSinceEpoch}.wav';
+    _currentRecordingPath =
+        '${directory.path}/command_${DateTime.now().millisecondsSinceEpoch}.wav';
 
     // Start recording
     await _recorder.start(
       const RecordConfig(
         encoder: AudioEncoder.wav,
-        sampleRate: 16000,  // Whisper expects 16kHz
-        numChannels: 1,     // Mono
+        sampleRate: 16000, // Whisper expects 16kHz
+        numChannels: 1, // Mono
         bitRate: 256000,
       ),
       path: _currentRecordingPath!,
@@ -98,15 +100,64 @@ class AudioService {
 
   /// Play audio from base64 string.
   Future<void> playAudioBase64(String base64Audio) async {
-    // Remove data URL prefix if present
-    final cleanBase64 = base64Audio.replaceFirst(
-      RegExp(r'data:audio/\w+;base64,'),
-      '',
-    );
+    try {
+      // Remove data URL prefix if present
+      String cleanBase64 = base64Audio;
 
-    // Decode and play
-    // Note: This is a simplified version. In production,
-    // you might need to save to a temp file first.
+      // Handle different data URL formats
+      if (base64Audio.contains('base64,')) {
+        cleanBase64 = base64Audio.split('base64,').last;
+      }
+
+      // Remove any whitespace
+      cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s'), '');
+
+      // Decode base64
+      final audioBytes = base64Decode(cleanBase64);
+
+      // Save to temp file and play
+      final directory = await getTemporaryDirectory();
+      final tempFile = File(
+          '${directory.path}/tts_${DateTime.now().millisecondsSinceEpoch}.wav');
+      await tempFile.writeAsBytes(audioBytes);
+
+      // Play the file
+      await _player.play(DeviceFileSource(tempFile.path));
+
+      // Clean up after playback
+      _player.onPlayerComplete.first.then((_) async {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      });
+    } catch (e) {
+      throw Exception('Failed to play audio: $e');
+    }
+  }
+
+  /// Play audio from URL.
+  Future<void> playAudioUrl(String url) async {
+    await _player.play(UrlSource(url));
+  }
+
+  /// Stop current playback.
+  Future<void> stopPlayback() async {
+    await _player.stop();
+  }
+
+  /// Pause current playback.
+  Future<void> pausePlayback() async {
+    await _player.pause();
+  }
+
+  /// Resume paused playback.
+  Future<void> resumePlayback() async {
+    await _player.resume();
+  }
+
+  /// Set playback volume (0.0 to 1.0).
+  Future<void> setVolume(double volume) async {
+    await _player.setVolume(volume.clamp(0.0, 1.0));
   }
 
   /// Get current audio amplitude (for visualization).
@@ -119,6 +170,12 @@ class AudioService {
     final normalized = (amplitude.current + 60) / 60;
     return normalized.clamp(0.0, 1.0);
   }
+
+  /// Listen for playback state changes.
+  Stream<PlayerState> get onPlayerStateChanged => _player.onPlayerStateChanged;
+
+  /// Listen for playback completion.
+  Stream<void> get onPlayerComplete => _player.onPlayerComplete;
 
   void dispose() {
     _recorder.dispose();

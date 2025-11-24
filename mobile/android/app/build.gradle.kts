@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.smartflightdeck.smart_flight_deck"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // ndkVersion = flutter.ndkVersion  // Disabled - not needed for this project
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

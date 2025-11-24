@@ -13,8 +13,28 @@ from pydantic import BaseModel
 
 import qrcode
 from config import settings, get_local_ip
+from sim.connection import SimConnection
 
 router = APIRouter()
+
+# Global SimConnect instance
+_sim_connection: SimConnection = None
+
+
+def get_sim_connection() -> SimConnection:
+    """Get or create SimConnect connection."""
+    global _sim_connection
+    if _sim_connection is None:
+        _sim_connection = SimConnection()
+    return _sim_connection
+
+
+def try_connect_sim():
+    """Try to connect to MSFS (called on startup and on-demand)."""
+    sim = get_sim_connection()
+    if not sim.is_connected:
+        sim.connect()
+    return sim.is_connected
 
 
 # ===========================
@@ -56,9 +76,47 @@ class SimStatus(BaseModel):
     connected: bool
     aircraft: Optional[str] = None
     flight_phase: Optional[str] = None
-    altitude: Optional[float] = None
-    speed: Optional[float] = None
-    gear_position: Optional[int] = None
+    on_ground: bool = True
+
+    # Position
+    latitude: float = 0.0
+    longitude: float = 0.0
+    altitude: float = 0.0
+    altitude_agl: float = 0.0
+    heading: float = 0.0
+    track: float = 0.0
+
+    # Speed
+    indicated_speed: float = 0.0
+    true_speed: float = 0.0
+    ground_speed: float = 0.0
+    mach: float = 0.0
+    vertical_speed: float = 0.0
+
+    # Aircraft systems
+    gear_position: int = 0
+    flaps_position: int = 0
+    spoilers_armed: bool = False
+
+    # Fuel
+    fuel_total_kg: float = 0.0
+    fuel_flow_kg_h: float = 0.0
+    fuel_percent: float = 0.0
+    fuel_endurance_min: int = 0
+
+    # Navigation
+    nav1_freq: float = 0.0
+    nav1_ident: Optional[str] = None
+    nav1_dme: float = 0.0
+    nav2_freq: float = 0.0
+    nav2_ident: Optional[str] = None
+    nav2_dme: float = 0.0
+
+    # Environment
+    wind_direction: float = 0.0
+    wind_speed: float = 0.0
+    oat: float = 0.0
+    qnh: float = 1013.0
 
 
 # ===========================
@@ -200,15 +258,69 @@ async def get_sim_status(x_session_token: str = Header(...)):
     if not validate_session(x_session_token):
         raise HTTPException(status_code=401, detail="Invalid session")
 
-    # TODO: Get actual SimConnect data
-    return SimStatus(
-        connected=False,
-        aircraft=None,
-        flight_phase=None,
-        altitude=None,
-        speed=None,
-        gear_position=None,
-    )
+    sim = get_sim_connection()
+
+    # Try to connect if not connected
+    if not sim.is_connected:
+        try_connect_sim()
+
+    # Get current state
+    if sim.is_connected:
+        state = sim.update_state()
+
+        # Calculate fuel endurance (minutes)
+        fuel_endurance_min = 0
+        if state.fuel_flow_kg_h > 0:
+            fuel_endurance_min = int((state.fuel_total_kg / state.fuel_flow_kg_h) * 60)
+
+        return SimStatus(
+            connected=True,
+            aircraft=state.aircraft_title or None,
+            flight_phase=None,  # TODO: Get from context engine
+            on_ground=state.on_ground,
+
+            # Position
+            latitude=state.latitude,
+            longitude=state.longitude,
+            altitude=state.altitude,
+            altitude_agl=state.altitude_agl,
+            heading=state.heading,
+            track=state.track,
+
+            # Speed
+            indicated_speed=state.indicated_airspeed,
+            true_speed=state.true_airspeed,
+            ground_speed=state.ground_speed,
+            mach=state.mach,
+            vertical_speed=state.vertical_speed,
+
+            # Aircraft systems
+            gear_position=state.gear_handle_position,
+            flaps_position=state.flaps_handle_index,
+            spoilers_armed=state.spoilers_armed,
+
+            # Fuel
+            fuel_total_kg=state.fuel_total_kg,
+            fuel_flow_kg_h=state.fuel_flow_kg_h,
+            fuel_percent=state.fuel_percent,
+            fuel_endurance_min=fuel_endurance_min,
+
+            # Navigation
+            nav1_freq=state.nav1_freq,
+            nav1_ident=state.nav1_ident or None,
+            nav1_dme=state.nav1_dme,
+            nav2_freq=state.nav2_freq,
+            nav2_ident=state.nav2_ident or None,
+            nav2_dme=state.nav2_dme,
+
+            # Environment
+            wind_direction=state.wind_direction,
+            wind_speed=state.wind_speed,
+            oat=state.oat,
+            qnh=state.qnh,
+        )
+
+    return SimStatus(connected=False)
 
 
 @router.post("/sim/command/{command}")
@@ -220,24 +332,54 @@ async def execute_sim_command(
     if not validate_session(x_session_token):
         raise HTTPException(status_code=401, detail="Invalid session")
 
-    valid_commands = [
-        "gear_toggle",
-        "gear_up",
-        "gear_down",
-        "flaps_up",
-        "flaps_down",
-        "parking_brake",
-    ]
+    # Map command names to SimConnect events
+    command_events = {
+        "gear_toggle": "GEAR_TOGGLE",
+        "gear_up": "GEAR_UP",
+        "gear_down": "GEAR_DOWN",
+        "flaps_up": "FLAPS_DECR",
+        "flaps_down": "FLAPS_INCR",
+        "flaps_1": "FLAPS_1",
+        "flaps_2": "FLAPS_2",
+        "flaps_3": "FLAPS_3",
+        "flaps_full": "FLAPS_DOWN",
+        "parking_brake": "PARKING_BRAKES",
+        "spoilers_arm": "SPOILERS_ARM_TOGGLE",
+        "spoilers_on": "SPOILERS_ON",
+        "spoilers_off": "SPOILERS_OFF",
+        "landing_lights": "LANDING_LIGHTS_TOGGLE",
+        "nav_lights": "NAV_LIGHTS_TOGGLE",
+        "beacon": "BEACON_LIGHTS_TOGGLE",
+        "strobe": "STROBES_TOGGLE",
+    }
 
-    if command not in valid_commands:
+    if command not in command_events:
         raise HTTPException(status_code=400, detail=f"Unknown command: {command}")
 
-    # TODO: Execute via SimConnect
-    return {
-        "success": True,
-        "command": command,
-        "message": f"Command '{command}' executed",
-    }
+    sim = get_sim_connection()
+
+    if not sim.is_connected:
+        try_connect_sim()
+
+    if not sim.is_connected:
+        raise HTTPException(status_code=503, detail="MSFS not connected")
+
+    # Execute the event
+    event_name = command_events[command]
+    success = sim.send_event(event_name)
+
+    if success:
+        return {
+            "success": True,
+            "command": command,
+            "event": event_name,
+            "message": f"Command '{command}' executed",
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to execute command: {command}"
+        )
 
 
 # ===========================

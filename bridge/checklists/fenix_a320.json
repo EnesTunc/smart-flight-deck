@@ -1,0 +1,662 @@
+{
+  "aircraft": "Fenix A320",
+  "version": "1.0",
+  "author": "Smart Flight Deck",
+  "notes": "Fenix A320 uses S_ (switch) and I_ (indicator) LVAR prefixes",
+  "checklists": {
+    "cockpit_preparation": {
+      "name": "Cockpit Preparation",
+      "phase": "PREFLIGHT",
+      "items": [
+        {
+          "id": "battery_1",
+          "challenge": "Battery 1",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_ELEC_BAT1",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "battery_2",
+          "challenge": "Battery 2",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_ELEC_BAT2",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "ext_power",
+          "challenge": "External power",
+          "expected_response": "As required",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "apu_master",
+          "challenge": "APU master switch",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_PNEUMATIC_APU_MASTER",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "apu_start",
+          "challenge": "APU start",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_PNEUMATIC_APU_START",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "nav_lights",
+          "challenge": "Navigation lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_EXT_LT_NAV_LOGO",
+            "condition": "greater_than",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "before_start": {
+      "name": "Before Start",
+      "phase": "PREFLIGHT",
+      "items": [
+        {
+          "id": "parking_brake",
+          "challenge": "Parking brake",
+          "expected_response": "Set",
+          "verification": {
+            "type": "simvar",
+            "variable": "BRAKE PARKING INDICATOR",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "beacon",
+          "challenge": "Beacon",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_EXT_LT_BEACON",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "fuel_quantity",
+          "challenge": "Fuel quantity",
+          "expected_response": "Checked",
+          "verification": {
+            "type": "simvar",
+            "variable": "FUEL TOTAL QUANTITY",
+            "condition": "greater_than",
+            "value": 100
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Low fuel quantity!"
+        },
+        {
+          "id": "adirs_1",
+          "challenge": "ADIRS 1",
+          "expected_response": "Nav",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_ADIRS_1",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "adirs_2",
+          "challenge": "ADIRS 2",
+          "expected_response": "Nav",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_ADIRS_2",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "adirs_3",
+          "challenge": "ADIRS 3",
+          "expected_response": "Nav",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_ADIRS_3",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "ADIRS not aligned!"
+        },
+        {
+          "id": "doors",
+          "challenge": "Doors",
+          "expected_response": "Closed",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        }
+      ]
+    },
+    "after_start": {
+      "name": "After Start",
+      "phase": "ENGINE_START",
+      "items": [
+        {
+          "id": "anti_ice",
+          "challenge": "Anti-ice",
+          "expected_response": "As required",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "apu_bleed",
+          "challenge": "APU bleed",
+          "expected_response": "Off",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_PNEUMATIC_APU_BLEED",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "ground_spoilers",
+          "challenge": "Ground spoilers",
+          "expected_response": "Armed",
+          "verification": {
+            "type": "lvar",
+            "variable": "I_FCU_SPOILER_ARM",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "rudder_trim",
+          "challenge": "Rudder trim",
+          "expected_response": "Zero",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "pitch_trim",
+          "challenge": "Pitch trim",
+          "expected_response": "Set for takeoff",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "flight_directors",
+          "challenge": "Flight directors",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "I_FCU_FD1",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "before_takeoff": {
+      "name": "Before Takeoff",
+      "phase": "TAXI",
+      "items": [
+        {
+          "id": "flight_controls",
+          "challenge": "Flight controls",
+          "expected_response": "Checked",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "flaps_config",
+          "challenge": "Flaps",
+          "expected_response": "Config 1, 2, or 3",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "in_range",
+            "min": 1,
+            "max": 3
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Flaps not in takeoff configuration!"
+        },
+        {
+          "id": "spoilers_arm",
+          "challenge": "Spoilers",
+          "expected_response": "Armed",
+          "verification": {
+            "type": "lvar",
+            "variable": "I_FCU_SPOILER_ARM",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "auto_brake",
+          "challenge": "Auto brake",
+          "expected_response": "Max",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_FC_AUTOBRAKE",
+            "condition": "equals",
+            "value": 4
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "takeoff_config",
+          "challenge": "Takeoff config",
+          "expected_response": "Normal, no blue",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Check ECAM for takeoff config warnings!"
+        },
+        {
+          "id": "transponder",
+          "challenge": "Transponder",
+          "expected_response": "TA/RA",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_XPDR_MODE",
+            "condition": "equals",
+            "value": 4
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "strobe",
+          "challenge": "Strobe lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_EXT_LT_STROBE",
+            "condition": "equals",
+            "value": 2
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "landing_lights",
+          "challenge": "Landing lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_EXT_LT_LANDING_L",
+            "condition": "equals",
+            "value": 2
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "packs",
+          "challenge": "Packs",
+          "expected_response": "As required",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "after_takeoff": {
+      "name": "After Takeoff",
+      "phase": "CLIMB",
+      "items": [
+        {
+          "id": "gear_up",
+          "challenge": "Landing gear",
+          "expected_response": "Up",
+          "verification": {
+            "type": "simvar",
+            "variable": "GEAR HANDLE POSITION",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Gear not retracted!"
+        },
+        {
+          "id": "flaps_retract",
+          "challenge": "Flaps",
+          "expected_response": "Zero",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "packs",
+          "challenge": "Packs",
+          "expected_response": "On",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "apu",
+          "challenge": "APU",
+          "expected_response": "As required",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "approach": {
+      "name": "Approach",
+      "phase": "APPROACH",
+      "items": [
+        {
+          "id": "briefing",
+          "challenge": "Approach briefing",
+          "expected_response": "Completed",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "ecam_status",
+          "challenge": "ECAM status",
+          "expected_response": "Checked",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "seat_belts",
+          "challenge": "Seat belts",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_SIGNS_SEAT_BELTS",
+            "condition": "equals",
+            "value": 2
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "minimums",
+          "challenge": "Minimums",
+          "expected_response": "Set",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "auto_brake",
+          "challenge": "Auto brake",
+          "expected_response": "Set",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_FC_AUTOBRAKE",
+            "condition": "greater_than",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "landing_lights_approach",
+          "challenge": "Landing lights",
+          "expected_response": "On",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_EXT_LT_LANDING_L",
+            "condition": "equals",
+            "value": 2
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "landing": {
+      "name": "Landing",
+      "phase": "APPROACH",
+      "items": [
+        {
+          "id": "gear_down",
+          "challenge": "Landing gear",
+          "expected_response": "Down",
+          "verification": {
+            "type": "simvar",
+            "variable": "GEAR HANDLE POSITION",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "GEAR NOT DOWN!"
+        },
+        {
+          "id": "spoilers_arm",
+          "challenge": "Spoilers",
+          "expected_response": "Armed",
+          "verification": {
+            "type": "lvar",
+            "variable": "I_FCU_SPOILER_ARM",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Spoilers not armed!"
+        },
+        {
+          "id": "flaps_full",
+          "challenge": "Flaps",
+          "expected_response": "Full",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "equals",
+            "value": 4
+          },
+          "action": { "type": "none" },
+          "critical": true,
+          "warning_if_fail": "Flaps not in landing configuration!"
+        }
+      ]
+    },
+    "after_landing": {
+      "name": "After Landing",
+      "phase": "LANDING",
+      "items": [
+        {
+          "id": "spoilers_disarm",
+          "challenge": "Spoilers",
+          "expected_response": "Disarmed",
+          "verification": {
+            "type": "lvar",
+            "variable": "I_FCU_SPOILER_ARM",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "flaps_retract_landing",
+          "challenge": "Flaps",
+          "expected_response": "Zero",
+          "verification": {
+            "type": "simvar",
+            "variable": "FLAPS HANDLE INDEX",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "strobe_off",
+          "challenge": "Strobe",
+          "expected_response": "Off or Auto",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "apu",
+          "challenge": "APU",
+          "expected_response": "As required",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "radar_pws",
+          "challenge": "Weather radar",
+          "expected_response": "Off",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    },
+    "shutdown": {
+      "name": "Shutdown",
+      "phase": "SHUTDOWN",
+      "items": [
+        {
+          "id": "parking_brake",
+          "challenge": "Parking brake",
+          "expected_response": "Set",
+          "verification": {
+            "type": "simvar",
+            "variable": "BRAKE PARKING INDICATOR",
+            "condition": "equals",
+            "value": 1
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "engines",
+          "challenge": "Engines",
+          "expected_response": "Off",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_ENG_MASTER_1",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": true
+        },
+        {
+          "id": "seat_belts_off",
+          "challenge": "Seat belts",
+          "expected_response": "Off",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_SIGNS_SEAT_BELTS",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "fuel_pumps",
+          "challenge": "Fuel pumps",
+          "expected_response": "Off",
+          "verification": { "type": "manual" },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "beacon_off",
+          "challenge": "Beacon",
+          "expected_response": "Off",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_EXT_LT_BEACON",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        },
+        {
+          "id": "apu_bleed_off",
+          "challenge": "APU bleed",
+          "expected_response": "Off",
+          "verification": {
+            "type": "lvar",
+            "variable": "S_OH_PNEUMATIC_APU_BLEED",
+            "condition": "equals",
+            "value": 0
+          },
+          "action": { "type": "none" },
+          "critical": false
+        }
+      ]
+    }
+  }
+}

@@ -153,6 +153,54 @@ class SimVariables:
         ),
     }
 
+    # Navigation
+    NAVIGATION: Dict[str, SimVariable] = {
+        "nav1_freq": SimVariable(
+            "NAV_ACTIVE_FREQUENCY:1", VarUnit.NUMBER, "NAV1 frequency"
+        ),
+        "nav1_ident": SimVariable(
+            "NAV_IDENT:1", VarUnit.ENUM, "NAV1 ident"
+        ),
+        "nav1_dme": SimVariable(
+            "NAV_DME:1", VarUnit.NUMBER, "NAV1 DME distance"
+        ),
+        "nav2_freq": SimVariable(
+            "NAV_ACTIVE_FREQUENCY:2", VarUnit.NUMBER, "NAV2 frequency"
+        ),
+        "nav2_ident": SimVariable(
+            "NAV_IDENT:2", VarUnit.ENUM, "NAV2 ident"
+        ),
+        "nav2_dme": SimVariable(
+            "NAV_DME:2", VarUnit.NUMBER, "NAV2 DME distance"
+        ),
+        "gps_ground_track": SimVariable(
+            "GPS_GROUND_TRUE_TRACK", VarUnit.DEGREES, "GPS ground track"
+        ),
+    }
+
+    # Wind
+    WIND: Dict[str, SimVariable] = {
+        "wind_direction": SimVariable(
+            "AMBIENT_WIND_DIRECTION", VarUnit.DEGREES, "Wind direction"
+        ),
+        "wind_speed": SimVariable(
+            "AMBIENT_WIND_VELOCITY", VarUnit.KNOTS, "Wind speed"
+        ),
+    }
+
+    # Position
+    POSITION: Dict[str, SimVariable] = {
+        "latitude": SimVariable(
+            "PLANE_LATITUDE", VarUnit.DEGREES, "Aircraft latitude"
+        ),
+        "longitude": SimVariable(
+            "PLANE_LONGITUDE", VarUnit.DEGREES, "Aircraft longitude"
+        ),
+        "mach": SimVariable(
+            "AIRSPEED_MACH", VarUnit.NUMBER, "Mach number"
+        ),
+    }
+
     # Aircraft info
     AIRCRAFT: Dict[str, SimVariable] = {
         "title": SimVariable("TITLE", VarUnit.ENUM, "Aircraft title"),
@@ -168,6 +216,9 @@ class SimVariables:
         all_vars.update(cls.ENVIRONMENT)
         all_vars.update(cls.ENGINE)
         all_vars.update(cls.FUEL)
+        all_vars.update(cls.NAVIGATION)
+        all_vars.update(cls.WIND)
+        all_vars.update(cls.POSITION)
         all_vars.update(cls.AIRCRAFT)
         return all_vars
 

@@ -621,24 +621,37 @@ dependencies:
 
 ## 10. Faz Plani
 
-### Faz 1: Temel Baglanti (MVP)
-- [ ] QR kod ile PC baglantisi
-- [ ] PTT butonu + ses kaydi
-- [ ] Temel sim verisi gosterimi
-- [ ] TTS yanit oynatma
-- [ ] Basit dark theme
+### Faz 1: Temel Baglanti (MVP) ✅ TAMAMLANDI
+- [x] ✅ QR kod ile PC baglantisi
+- [x] ✅ PTT butonu + ses kaydi
+- [x] ✅ Temel sim verisi gosterimi
+- [x] ✅ TTS yanit oynatma
+- [x] ✅ Basit dark theme
+- [x] ✅ Riverpod state management
+- [x] ✅ Auto-reconnection & saved connections
 
-### Faz 2: Flight Data
-- [ ] PFD tape'leri (speed, altitude)
-- [ ] Navigation bilgileri
-- [ ] Fuel/weight gosterimi
-- [ ] Engine data
+### Faz 2: Flight Data ✅ TAMAMLANDI
+- [x] ✅ PFD tape'leri (speed, altitude) - CustomPaint ile gercek PFD gorunumu
+- [x] ✅ Navigation bilgileri (HDG, TRK, WIND, NAV1/NAV2, DME)
+- [x] ✅ Fuel/weight gosterimi (progress bar, endurance, flow)
+- [x] ✅ Flight Data Screen (portrait + landscape layout)
+- [ ] Engine data (N1, N2, EGT - MVP sonrasi)
 
-### Faz 3: Checklist UI
-- [ ] Interaktif checklist ekrani
-- [ ] Sesli kontrol entegrasyonu
-- [ ] Dogrulama durumu gosterimi
-- [ ] Checklist secimi
+> **Not:** Bridge tarafinda AircraftState ve WebSocket genisletildi,
+> tum veriler nested JSON formatinda mobile'a gonderiliyor (2Hz).
+
+### Faz 3: Checklist UI ✅ TAMAMLANDI
+- [x] ✅ Interaktif checklist ekrani (checklist_detail_screen.dart)
+- [x] ✅ Checklist secimi (brosur tarzı UI, faz bazlı gruplama)
+- [x] ✅ Arama fonksiyonu (checklist_screen.dart)
+- [x] ✅ Dogrulama durumu gosterimi (verified/not verified badges)
+- [x] ✅ Progress tracking (progress bar, yuzde gosterimi)
+- [x] ✅ CHECK/SKIP/CANCEL butonlari
+- [x] ✅ Haptic feedback
+- [ ] Sesli kontrol entegrasyonu (PTT ile checklist kontrolu - MVP sonrasi)
+
+> **Not:** Backend checklist sistemi hazir (8 API endpoint).
+> Mobil UI tamamlandi - checklist_provider.dart, checklist_screen.dart, checklist_detail_screen.dart
 
 ### Faz 4: Harita
 - [ ] OpenStreetMap entegrasyonu
@@ -774,13 +787,13 @@ Entegrasyon Ne Saglar:
 
 ### 12.2 MVP Basari Kriterleri
 
-- [ ] PC Bridge'e baglanabiliyor
-- [ ] Ses kaydedip gonderebiliyor
-- [ ] Komut yaniti alabiliyor (TTS)
-- [ ] Ucak verilerini gorebiliyor
-- [ ] Checklist kullanabiliyor
-- [ ] Telefon VE tablette calisiyor
-- [ ] Android VE iOS'ta calisiyor
+- [x] ✅ PC Bridge'e baglanabiliyor
+- [x] ✅ Ses kaydedip gonderebiliyor
+- [x] ✅ Komut yaniti alabiliyor (TTS)
+- [x] ✅ Ucak verilerini gorebiliyor
+- [x] ✅ Checklist kullanabiliyor
+- [ ] Telefon VE tablette calisiyor (test edilecek)
+- [ ] Android VE iOS'ta calisiyor (iOS test edilecek)
 
 ---
 
@@ -815,7 +828,13 @@ Entegrasyon Ne Saglar:
 | 2025-01-23 | Kararlar eklendi: OurAirports, MVP kapsami, responsive tasarim |
 | 2025-01-23 | VATSIM ve SimBrief aciklamalari eklendi |
 | 2025-01-23 | MSFS veri kullanim riski dokumante edildi |
+| 2025-11-24 | Faz 1 ve Faz 2 tamamlandi olarak isaretlendi |
+| 2025-11-24 | PFD Tape, Navigation, Fuel widget'lari eklendi |
+| 2025-11-24 | Faz 3 (Checklist UI) tamamlandi |
+| 2025-11-24 | Flight Data 3-tab sistemi eklendi (PFD, NAV, FUEL) |
+| 2025-11-24 | Kullanici dostu hata mesajlari eklendi |
+| 2025-11-24 | QR kod HTML sayfasi eklendi |
 
 ---
 
-*Son guncelleme: 2025-01-23*
+*Son guncelleme: 2025-11-24*
