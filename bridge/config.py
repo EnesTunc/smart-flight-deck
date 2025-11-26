@@ -33,7 +33,11 @@ class Settings(BaseSettings):
 
     # Piper TTS
     piper_voice: str = Field(
-        default="en_US-lessac-medium", description="Piper TTS voice model"
+        default="ljspeech",
+        description="Piper TTS voice: ljspeech, cori-high, john, bryce (all Public Domain)"
+    )
+    tts_enabled: bool = Field(
+        default=True, description="Enable text-to-speech responses"
     )
 
     # License

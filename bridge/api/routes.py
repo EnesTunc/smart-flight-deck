@@ -1140,3 +1140,268 @@ async def set_checklist_aircraft(
         "available_checklists": len(checklists),
         "checklists": checklists,
     }
+
+
+# ===========================
+# TTS & SETTINGS
+# ===========================
+
+# Global TTS instance
+_tts_instance = None
+
+
+def get_tts():
+    """Get or create TTS instance."""
+    global _tts_instance
+    if _tts_instance is None:
+        from audio.tts import PiperTTS
+        _tts_instance = PiperTTS(voice=settings.piper_voice)
+        _tts_instance.load()
+    return _tts_instance
+
+
+class SettingsUpdate(BaseModel):
+    """Settings update request."""
+    tts_enabled: Optional[bool] = None
+    tts_voice: Optional[str] = None
+    verification_enabled: Optional[bool] = None
+
+
+@router.get("/api/tts/voices")
+async def get_tts_voices():
+    """
+    Get list of available TTS voices with installation status.
+
+    All voices are Public Domain - safe for commercial use.
+    """
+    from audio.tts import PiperTTS
+
+    voices = PiperTTS.get_available_voices()
+    current_voice = settings.piper_voice
+
+    # Check which voices are installed
+    models_dir = Path(settings.models_dir) / "piper"
+    for voice in voices:
+        voice_dir = models_dir / voice['id']
+        onnx_file = voice_dir / f"{voice['file_prefix']}.onnx"
+        voice['installed'] = onnx_file.exists()
+        if voice['installed']:
+            voice['size_mb'] = round(onnx_file.stat().st_size / (1024 * 1024), 1)
+        else:
+            voice['size_mb'] = 0
+
+    return {
+        "current_voice": current_voice,
+        "voices": voices,
+        "total": len(voices),
+        "installed": sum(1 for v in voices if v['installed']),
+    }
+
+
+@router.post("/api/tts/preview")
+async def preview_tts_voice(
+    voice_id: str,
+    text: Optional[str] = "Welcome to Smart Flight Deck Companion",
+    x_session_token: str = Header(...),
+):
+    """
+    Preview a TTS voice with sample text.
+
+    Returns audio data as base64 encoded WAV.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    from audio.tts import PiperTTS, AVAILABLE_VOICES
+
+    if voice_id not in AVAILABLE_VOICES:
+        raise HTTPException(status_code=400, detail=f"Unknown voice: {voice_id}")
+
+    # Create temporary TTS instance with requested voice
+    tts = PiperTTS(voice=voice_id)
+    if not tts.load():
+        raise HTTPException(status_code=500, detail="Failed to load TTS voice")
+
+    # Synthesize preview
+    audio_data = tts.synthesize(text)
+    audio_base64 = base64.b64encode(audio_data).decode()
+
+    voice_info = AVAILABLE_VOICES[voice_id]
+
+    return {
+        "voice": voice_id,
+        "voice_info": voice_info,
+        "text": text,
+        "audio": audio_base64,
+        "format": "wav",
+        "sample_rate": 22050,
+    }
+
+
+@router.get("/api/settings")
+async def get_settings(x_session_token: str = Header(...)):
+    """
+    Get current Bridge settings.
+
+    Includes TTS voice, Whisper model, and feature flags.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    from audio.tts import PiperTTS
+
+    tts = get_tts()
+
+    return {
+        "version": "1.0.0",
+        "tts_enabled": settings.tts_enabled,
+        "tts_voice": settings.piper_voice,
+        "tts_voice_info": tts.get_voice_info(),
+        "verification_enabled": True,  # From checklist system
+        "whisper_model": settings.whisper_model,
+        "language": "en",
+    }
+
+
+@router.put("/api/settings")
+async def update_settings(
+    updates: SettingsUpdate,
+    x_session_token: str = Header(...),
+):
+    """
+    Update Bridge settings.
+
+    Supported settings:
+    - tts_enabled: Enable/disable TTS
+    - tts_voice: Change active voice
+    - verification_enabled: Enable/disable checklist verification
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    changed = []
+
+    # Update TTS voice
+    if updates.tts_voice is not None:
+        from audio.tts import AVAILABLE_VOICES
+
+        if updates.tts_voice not in AVAILABLE_VOICES:
+            raise HTTPException(status_code=400, detail=f"Unknown voice: {updates.tts_voice}")
+
+        tts = get_tts()
+        if tts.set_voice(updates.tts_voice):
+            settings.piper_voice = updates.tts_voice
+            changed.append("tts_voice")
+        else:
+            raise HTTPException(status_code=500, detail="Failed to change voice")
+
+    # Update TTS enabled
+    if updates.tts_enabled is not None:
+        settings.tts_enabled = updates.tts_enabled
+        changed.append("tts_enabled")
+
+    # TODO: Update verification_enabled when implemented
+
+    return {
+        "success": True,
+        "message": f"Updated: {', '.join(changed)}" if changed else "No changes",
+        "settings": {
+            "tts_enabled": settings.tts_enabled,
+            "tts_voice": settings.piper_voice,
+            "verification_enabled": True,
+        },
+    }
+
+
+@router.post("/api/tts/download")
+async def download_tts_voice(
+    voice_id: str,
+    x_session_token: str = Header(...),
+):
+    """
+    Download a TTS voice on demand.
+
+    This allows mobile app to request additional voices to be downloaded.
+    Bridge downloads the voice files and returns status.
+    """
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    from audio.tts import AVAILABLE_VOICES
+    import requests
+
+    if voice_id not in AVAILABLE_VOICES:
+        raise HTTPException(status_code=400, detail=f"Unknown voice: {voice_id}")
+
+    voice_info = AVAILABLE_VOICES[voice_id]
+
+    # Check if already downloaded
+    models_dir = Path(settings.models_dir) / "piper"
+    voice_dir = models_dir / voice_id
+    onnx_file = voice_dir / f"{voice_info['file_prefix']}.onnx"
+
+    if onnx_file.exists():
+        return {
+            "success": True,
+            "message": "Voice already installed",
+            "voice": voice_id,
+            "voice_info": voice_info,
+            "size_mb": onnx_file.stat().st_size / (1024 * 1024),
+        }
+
+    # Download voice
+    try:
+        voice_dir.mkdir(parents=True, exist_ok=True)
+
+        # Download .onnx model
+        onnx_url = f"https://sfo3.digitaloceanspaces.com/bkmdls/{voice_info['file_prefix']}.onnx"
+        response = requests.get(onnx_url, stream=True, timeout=60)
+        response.raise_for_status()
+
+        with open(onnx_file, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=32768):
+                if chunk:
+                    f.write(chunk)
+
+        # Download .onnx.json config
+        json_file = voice_dir / f"{voice_info['file_prefix']}.onnx.json"
+        json_url = f"https://sfo3.digitaloceanspaces.com/bkmdls/{voice_info['file_prefix']}.onnx.json"
+        response = requests.get(json_url, timeout=30)
+        response.raise_for_status()
+        json_file.write_bytes(response.content)
+
+        size_mb = onnx_file.stat().st_size / (1024 * 1024)
+
+        return {
+            "success": True,
+            "message": "Voice downloaded successfully",
+            "voice": voice_id,
+            "voice_info": voice_info,
+            "size_mb": size_mb,
+        }
+
+    except Exception as e:
+        # Cleanup on failure
+        if voice_dir.exists():
+            import shutil
+            shutil.rmtree(voice_dir)
+
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+
+@router.get("/api/version")
+async def get_version():
+    """
+    Get Bridge version information.
+
+    No authentication required.
+    """
+    import sys
+    import platform
+
+    return {
+        "version": "1.0.0",
+        "build": "20251125",
+        "python_version": sys.version.split()[0],
+        "platform": platform.platform(),
+    }

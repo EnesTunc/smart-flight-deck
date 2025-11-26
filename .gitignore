@@ -84,6 +84,7 @@ dmypy.json
 # Model files are large, only keep .gitkeep
 *.bin
 *.onnx
+*.onnx.json
 *.pt
 *.pth
 *.gguf

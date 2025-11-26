@@ -1,15 +1,54 @@
 """
 Smart Flight Deck Companion - Text-to-Speech
 Piper TTS integration for voice responses.
+
+All voices are Public Domain - safe for commercial use.
 """
 
 import logging
 import wave
 import io
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, List
 
 logger = logging.getLogger(__name__)
+
+
+# Available voices (all Public Domain - commercial use safe)
+AVAILABLE_VOICES: Dict[str, Dict] = {
+    "ljspeech": {
+        "display_name": "Linda (US Female)",
+        "gender": "female",
+        "accent": "US",
+        "quality": "high",
+        "license": "Public Domain",
+        "file_prefix": "ljspeech",
+    },
+    "cori-high": {
+        "display_name": "Cori (UK Female)",
+        "gender": "female",
+        "accent": "UK",
+        "quality": "high",
+        "license": "Public Domain",
+        "file_prefix": "cori-high",
+    },
+    "john": {
+        "display_name": "John (US Male)",
+        "gender": "male",
+        "accent": "US",
+        "quality": "medium",
+        "license": "Public Domain",
+        "file_prefix": "john",
+    },
+    "bryce": {
+        "display_name": "Bryce (US Male)",
+        "gender": "male",
+        "accent": "US",
+        "quality": "medium",
+        "license": "Public Domain",
+        "file_prefix": "bryce",
+    },
+}
 
 
 class PiperTTS:
@@ -17,29 +56,52 @@ class PiperTTS:
     Text-to-Speech using Piper TTS.
 
     Generates natural-sounding speech for copilot responses.
+    Supports multiple voices (all Public Domain licensed).
     """
 
     def __init__(
         self,
-        voice: str = "en_US-lessac-medium",
+        voice: str = "ljspeech",
         models_dir: Optional[Path] = None,
     ):
         self.voice = voice
-        self.models_dir = models_dir or Path("models")
+        self.models_dir = models_dir or Path("models") / "piper"
         self._loaded = False
         self._piper = None
+
+        # Validate voice
+        if voice not in AVAILABLE_VOICES:
+            logger.warning(f"Unknown voice '{voice}', using default 'ljspeech'")
+            self.voice = "ljspeech"
 
     def load(self) -> bool:
         """Load the Piper TTS model."""
         try:
+            # Get voice info
+            voice_info = AVAILABLE_VOICES.get(self.voice)
+            if not voice_info:
+                logger.error(f"Unknown voice: {self.voice}")
+                return False
+
+            # Build model path
+            voice_dir = self.models_dir / self.voice
+            model_file = voice_info['file_prefix'] + ".onnx"
+            model_path = voice_dir / model_file
+
+            if not model_path.exists():
+                logger.error(f"Model file not found: {model_path}")
+                logger.error("Run 'python scripts/download_tts_voices.py' to download voices")
+                return False
+
+            logger.info(f"Loading Piper TTS voice: {voice_info['display_name']}")
+            logger.info(f"Model path: {model_path}")
+
             # TODO: Implement actual Piper loading
             # from piper import PiperVoice
-            # model_path = self.models_dir / f"{self.voice}.onnx"
             # self._piper = PiperVoice.load(model_path)
 
-            logger.info(f"Loading Piper TTS voice: {self.voice}")
             self._loaded = True
-            logger.info("Piper TTS loaded successfully")
+            logger.info(f"Piper TTS loaded: {voice_info['display_name']} ({voice_info['license']})")
             return True
 
         except Exception as e:
@@ -112,6 +174,42 @@ class PiperTTS:
             wav_file.writeframes(silent_data)
 
         return buffer.getvalue()
+
+    def set_voice(self, voice: str) -> bool:
+        """
+        Change the active voice.
+
+        Args:
+            voice: Voice ID from AVAILABLE_VOICES
+
+        Returns:
+            True if voice changed successfully
+        """
+        if voice not in AVAILABLE_VOICES:
+            logger.error(f"Unknown voice: {voice}")
+            return False
+
+        if voice == self.voice:
+            return True  # Already using this voice
+
+        self.voice = voice
+        self._loaded = False  # Force reload
+        return self.load()
+
+    def get_voice_info(self) -> Dict:
+        """Get current voice information."""
+        return AVAILABLE_VOICES.get(self.voice, {})
+
+    @staticmethod
+    def get_available_voices() -> List[Dict]:
+        """Get list of all available voices with metadata."""
+        return [
+            {
+                "id": voice_id,
+                **voice_info,
+            }
+            for voice_id, voice_info in AVAILABLE_VOICES.items()
+        ]
 
     @property
     def is_loaded(self) -> bool:

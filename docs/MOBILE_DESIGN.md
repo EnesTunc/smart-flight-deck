@@ -281,6 +281,79 @@ Sadece bir "uzaktan kumanda" degil, **tam donanimli bir Electronic Flight Bag (E
 +------------------------------------------------------------------+
 ```
 
+### 3.6 Settings Ekrani ✅ IMPLEMENTED (2025-11-25)
+
+```
++------------------------------------------------------------------+
+|  [<]  SETTINGS                                          [Save]   |
++------------------------------------------------------------------+
+|                                                                    |
+|  +--------------------------------------------------------------+  |
+|  |  CONNECTION                                                  |  |
+|  +--------------------------------------------------------------+  |
+|  |  Status: Connected to 192.168.1.100:8000                     |  |
+|  |                                                              |  |
+|  |  [Change Connection]          [Disconnect]                   |  |
+|  +--------------------------------------------------------------+  |
+|                                                                    |
+|  +--------------------------------------------------------------+  |
+|  |  AUDIO & HAPTICS                                             |  |
+|  +--------------------------------------------------------------+  |
+|  |  Microphone Sensitivity:    50%                              |  |
+|  |  [Low] ────●────────── [High]                                |  |
+|  |                                                              |  |
+|  |  TTS Voice:  [Linda (US Female) ▼]   [Preview]              |  |
+|  |    License: Public Domain      Size: 109 MB                  |  |
+|  |    [Download] (other voices)                                 |  |
+|  |                                                              |  |
+|  |  TTS Volume:    80%                                          |  |
+|  |  [Low] ──────────●──── [High]                                |  |
+|  |                                                              |  |
+|  |  Haptic Feedback:  [✓ ON]                                    |  |
+|  +--------------------------------------------------------------+  |
+|                                                                    |
+|  +--------------------------------------------------------------+  |
+|  |  CHECKLIST                                                   |  |
+|  +--------------------------------------------------------------+  |
+|  |  Auto Verification:     [✓ ON]                               |  |
+|  |    Verify items using MSFS SimConnect/WASM data              |  |
+|  |                                                              |  |
+|  |  Voice Announcements:   [✓ ON]                               |  |
+|  |    Read checklist items aloud via TTS                        |  |
+|  +--------------------------------------------------------------+  |
+|                                                                    |
+|  +--------------------------------------------------------------+  |
+|  |  APPEARANCE                                                  |  |
+|  +--------------------------------------------------------------+  |
+|  |  Theme Mode:   [Dark ▼]                                      |  |
+|  |    Options: Dark, Light                                      |  |
+|  +--------------------------------------------------------------+  |
+|                                                                    |
+|  +--------------------------------------------------------------+  |
+|  |  ABOUT                                                       |  |
+|  +--------------------------------------------------------------+  |
+|  |  App Version:    1.0.0 (build 20250125)                      |  |
+|  |  Bridge Version: 1.0.0                                       |  |
+|  +--------------------------------------------------------------+  |
+|                                                                    |
++------------------------------------------------------------------+
+```
+
+**Available TTS Voices (All Public Domain):**
+- **Linda (US Female)** - ljspeech - 109 MB - High quality - ✅ Pre-installed
+- **Cori (UK Female)** - cori-high - 109 MB - High quality - ⬇️ Download on-demand
+- **John (US Male)** - john - 61 MB - Medium quality - ⬇️ Download on-demand
+- **Bryce (US Male)** - bryce - 61 MB - Medium quality - ⬇️ Download on-demand
+
+**Settings Features:**
+- ✅ Immediate save (no save button needed)
+- ✅ Haptic feedback on all interactions
+- ✅ Voice preview with sample text
+- ✅ On-demand voice download with progress indicator
+- ✅ Sync with Bridge API (SharedPreferences + API)
+- ✅ Offline support (local changes saved, synced when reconnected)
+- ✅ Aviation-themed dark UI (#00E676 green accent)
+
 ---
 
 ## 4. Harita Sistemi
@@ -834,7 +907,12 @@ Entegrasyon Ne Saglar:
 | 2025-11-24 | Flight Data 3-tab sistemi eklendi (PFD, NAV, FUEL) |
 | 2025-11-24 | Kullanici dostu hata mesajlari eklendi |
 | 2025-11-24 | QR kod HTML sayfasi eklendi |
+| 2025-11-25 | ✅ Settings UI tamamlandi (Settings screen + Riverpod provider) |
+| 2025-11-25 | ✅ TTS multi-voice sistem (4 Public Domain voices) |
+| 2025-11-25 | ✅ On-demand voice download sistemi eklendi |
+| 2025-11-25 | ✅ Mic sensitivity, TTS volume slider eklendi |
+| 2025-11-25 | ✅ Theme mode toggle (Dark/Light) eklendi |
 
 ---
 
-*Son guncelleme: 2025-11-24*
+*Son guncelleme: 2025-11-25*

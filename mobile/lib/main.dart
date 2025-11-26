@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
+import 'providers/settings_provider.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize SharedPreferences
+  final sharedPreferences = await SharedPreferences.getInstance();
 
   // Set preferred orientations (allow all for tablets)
   await SystemChrome.setPreferredOrientations([
@@ -27,8 +32,12 @@ void main() async {
 
   // Run the app with Riverpod
   runApp(
-    const ProviderScope(
-      child: SmartFlightDeckApp(),
+    ProviderScope(
+      overrides: [
+        // Override SharedPreferences provider with the initialized instance
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+      ],
+      child: const SmartFlightDeckApp(),
     ),
   );
 }

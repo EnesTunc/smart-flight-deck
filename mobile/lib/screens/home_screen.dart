@@ -10,6 +10,7 @@ import '../widgets/sim_data_panel.dart';
 import 'checklist_screen.dart';
 import 'flight_data_screen.dart';
 import 'qr_scanner_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -251,9 +252,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _openSettings() {
-    // TODO: Implement settings screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings coming soon')),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SettingsScreen(),
+      ),
     );
   }
 
