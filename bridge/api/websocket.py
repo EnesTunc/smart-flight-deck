@@ -6,6 +6,8 @@ Real-time communication with mobile app.
 import asyncio
 import json
 import logging
+import base64
+import numpy as np
 from typing import Set
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -15,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 # Connected clients
 connected_clients: Set[WebSocket] = set()
+
+# Import VAD processor
+from audio.vad_processor import get_vad_processor, remove_vad_session
 
 
 class ConnectionManager:
@@ -212,10 +217,89 @@ async def handle_client_message(session_token: str, message: dict):
             },
         )
 
-    elif msg_type == "audio_stream":
-        # Streaming audio data
-        # TODO: Process audio chunks
-        pass
+    elif msg_type == "audio_chunk":
+        # Streaming audio chunk with VAD
+        await handle_audio_chunk(session_token, message)
+
+    elif msg_type == "audio_stream_start":
+        # Client started audio streaming
+        logger.info(f"Audio stream started: {session_token[:8]}")
+        vad = get_vad_processor(session_token)
+        vad.reset()
+
+    elif msg_type == "audio_stream_stop":
+        # Client stopped audio streaming
+        logger.info(f"Audio stream stopped: {session_token[:8]}")
+        remove_vad_session(session_token)
 
     else:
         logger.warning(f"Unknown message type: {msg_type}")
+
+
+async def handle_audio_chunk(session_token: str, message: dict):
+    """
+    Process audio chunk with VAD.
+
+    Message format:
+    {
+        "type": "audio_chunk",
+        "audio": "base64_encoded_float32_pcm",
+        "sample_rate": 16000
+    }
+    """
+    try:
+        # Decode audio
+        audio_base64 = message.get("audio")
+        if not audio_base64:
+            return
+
+        audio_bytes = base64.b64decode(audio_base64)
+        audio_float32 = np.frombuffer(audio_bytes, dtype=np.float32)
+
+        # Process with VAD
+        vad = get_vad_processor(session_token)
+        has_ended, speech_segment = vad.process_chunk(audio_float32)
+
+        if has_ended and speech_segment is not None:
+            # Speech segment complete - process it
+            logger.info(f"Processing speech segment: {len(speech_segment)/16000:.2f}s")
+
+            # Export as WAV
+            wav_bytes = vad.export_wav(speech_segment)
+
+            # Send to command pipeline (same as phone recording)
+            # TODO: Integrate with Whisper + Parser + SimConnect
+            result = await process_speech_segment(session_token, wav_bytes)
+
+            # Send result back to client
+            await manager.send_personal(session_token, {
+                "type": "command_result",
+                "success": result.get("success", False),
+                "command": result.get("command", ""),
+                "message": result.get("message", ""),
+                "tts_audio": result.get("tts_audio"),
+            })
+
+    except Exception as e:
+        logger.error(f"Audio chunk processing error: {e}")
+
+
+async def process_speech_segment(session_token: str, wav_bytes: bytes) -> dict:
+    """
+    Process complete speech segment through command pipeline.
+
+    TODO: This should call:
+    1. Whisper STT
+    2. Command parser
+    3. SimConnect execution
+    4. TTS response
+
+    For now, returns placeholder.
+    """
+    # Placeholder - same as routes.py
+    return {
+        "success": True,
+        "command": "[VAD detected speech]",
+        "message": f"Received {len(wav_bytes)} bytes audio",
+        "tts_audio": None,
+    }

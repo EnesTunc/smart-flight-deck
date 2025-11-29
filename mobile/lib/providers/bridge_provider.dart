@@ -443,6 +443,40 @@ class BridgeNotifier extends StateNotifier<BridgeConnectionState> {
     }
   }
 
+  /// Start PC microphone recording
+  Future<bool> startPcRecording() async {
+    if (_dio == null || !state.isConnected) return false;
+
+    try {
+      final response = await _dio!.post('/api/audio/pc/start');
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Stop PC microphone recording and get result
+  Future<CommandResult> stopPcRecording() async {
+    if (_dio == null || !state.isConnected) {
+      return const CommandResult(
+        success: false,
+        command: '',
+        message: 'Not connected',
+      );
+    }
+
+    try {
+      final response = await _dio!.post('/api/audio/pc/stop');
+      return CommandResult.fromJson(response.data);
+    } catch (e) {
+      return CommandResult(
+        success: false,
+        command: '',
+        message: 'Failed to stop PC recording: $e',
+      );
+    }
+  }
+
   /// Get sim status via HTTP
   Future<SimData?> getSimStatus() async {
     if (_dio == null || !state.isConnected) return null;

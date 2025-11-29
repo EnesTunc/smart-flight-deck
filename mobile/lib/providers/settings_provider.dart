@@ -16,6 +16,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   static Map<String, dynamic> _loadFromPrefs(SharedPreferences prefs) {
     return {
+      'audio_source': prefs.getString('audio_source'),
       'mic_sensitivity': prefs.getDouble('mic_sensitivity'),
       'tts_voice': prefs.getString('tts_voice'),
       'tts_volume': prefs.getDouble('tts_volume'),
@@ -29,6 +30,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   /// Save current state to SharedPreferences
   Future<void> _saveToPrefs() async {
     final json = state.toJson();
+    await _prefs.setString('audio_source', json['audio_source']);
     await _prefs.setDouble('mic_sensitivity', json['mic_sensitivity']);
     await _prefs.setString('tts_voice', json['tts_voice']);
     await _prefs.setDouble('tts_volume', json['tts_volume']);
@@ -55,6 +57,12 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       debugPrint('Failed to sync settings to Bridge: $e');
       return false;
     }
+  }
+
+  /// Update audio source
+  Future<void> setAudioSource(AudioSource source) async {
+    state = state.copyWith(audioSource: source);
+    await _saveToPrefs();
   }
 
   /// Update microphone sensitivity
@@ -152,26 +160,39 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 /// Available TTS voices provider
 final availableVoicesProvider = FutureProvider<List<TtsVoice>>((ref) async {
   final bridgeState = ref.watch(bridgeProvider);
+
+  debugPrint('>>> TTS Voices Provider - Bridge Status: ${bridgeState.status}');
+  debugPrint('>>> TTS Voices Provider - IP: ${bridgeState.bridgeIp}, Port: ${bridgeState.bridgePort}');
+
   if (bridgeState.status != ConnectionStatus.connected ||
       bridgeState.bridgeIp == null ||
       bridgeState.bridgePort == null) {
+    debugPrint('>>> TTS Voices Provider - Not connected, returning empty list');
     return [];
   }
 
+  final baseUrl = 'http://${bridgeState.bridgeIp}:${bridgeState.bridgePort}';
+  debugPrint('>>> TTS Voices Provider - Fetching from: $baseUrl/api/tts/voices');
+
   final dio = Dio(BaseOptions(
-    baseUrl: 'http://${bridgeState.bridgeIp}:${bridgeState.bridgePort}',
+    baseUrl: baseUrl,
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 10),
   ));
 
   try {
     final response = await dio.get('/api/tts/voices');
+    debugPrint('>>> TTS Voices Provider - Response status: ${response.statusCode}');
+    debugPrint('>>> TTS Voices Provider - Response data: ${response.data}');
+
     if (response.statusCode == 200) {
       final List voices = response.data['voices'] ?? [];
+      debugPrint('>>> TTS Voices Provider - Found ${voices.length} voices');
       return voices.map((v) => TtsVoice.fromJson(v)).toList();
     }
-  } catch (e) {
-    debugPrint('Failed to load TTS voices: $e');
+  } catch (e, stackTrace) {
+    debugPrint('>>> TTS Voices Provider - ERROR: $e');
+    debugPrint('>>> TTS Voices Provider - Stack: $stackTrace');
   }
   return [];
 });

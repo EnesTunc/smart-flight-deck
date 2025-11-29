@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/bridge_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/audio_service.dart';
 import '../theme/app_theme.dart';
+import '../models/app_settings.dart';
 
-/// Push-to-Talk button for voice commands.
+/// Microphone Toggle button for voice commands.
+/// Tap to activate/deactivate recording.
 class PTTButton extends ConsumerStatefulWidget {
   const PTTButton({super.key});
 
@@ -72,11 +75,9 @@ class _PTTButtonState extends ConsumerState<PTTButton>
             ),
           ),
 
-        // PTT Button
+        // Mic Toggle Button
         GestureDetector(
-          onLongPressStart: isConnected ? (_) => _startRecording() : null,
-          onLongPressEnd: isConnected ? (_) => _stopRecording() : null,
-          onLongPressCancel: () => _cancelRecording(),
+          onTap: isConnected ? _toggleRecording : null,
           child: AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
@@ -123,9 +124,9 @@ class _PTTButtonState extends ConsumerState<PTTButton>
 
   String _getStatusText(bool isConnected) {
     if (!isConnected) return 'Connect to use voice';
-    if (_isRecording) return 'Listening...';
+    if (_isRecording) return 'Recording... (Tap to stop)';
     if (_isProcessing) return 'Processing...';
-    return 'Hold to speak';
+    return 'Tap to activate mic';
   }
 
   Color _getButtonColor(bool isConnected) {
@@ -141,16 +142,44 @@ class _PTTButtonState extends ConsumerState<PTTButton>
     return Icons.mic_none;
   }
 
+  /// Toggle recording on/off
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      await _stopRecording();
+    } else {
+      await _startRecording();
+    }
+  }
+
   Future<void> _startRecording() async {
+    final settings = ref.read(settingsProvider);
+
     // Haptic feedback
-    HapticFeedback.mediumImpact();
+    if (settings.hapticFeedback) {
+      HapticFeedback.mediumImpact();
+    }
 
     setState(() {
       _lastResult = null;
     });
 
     try {
-      await _audioService.startRecording();
+      // Check audio source
+      if (settings.audioSource == AudioSource.phone) {
+        // Phone microphone - record locally
+        await _audioService.startRecording();
+      } else {
+        // PC microphone - signal Bridge to start recording
+        final success = await ref
+            .read(bridgeProvider.notifier)
+            .startPcRecording();
+
+        if (!success) {
+          _showError('Failed to start PC recording');
+          return;
+        }
+      }
+
       setState(() {
         _isRecording = true;
       });
@@ -162,8 +191,12 @@ class _PTTButtonState extends ConsumerState<PTTButton>
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
 
+    final settings = ref.read(settingsProvider);
+
     // Haptic feedback
-    HapticFeedback.lightImpact();
+    if (settings.hapticFeedback) {
+      HapticFeedback.lightImpact();
+    }
 
     setState(() {
       _isRecording = false;
@@ -171,13 +204,36 @@ class _PTTButtonState extends ConsumerState<PTTButton>
     });
 
     try {
-      final audioData = await _audioService.stopRecording();
+      if (settings.audioSource == AudioSource.phone) {
+        // Phone microphone - get local recording
+        final audioData = await _audioService.stopRecording();
 
-      if (audioData != null && audioData.isNotEmpty) {
-        // Send to bridge for processing
+        if (audioData != null && audioData.isNotEmpty) {
+          // Send to bridge for processing
+          final result = await ref
+              .read(bridgeProvider.notifier)
+              .sendAudioCommand(audioData);
+
+          setState(() {
+            _lastResult = result.success
+                ? '"${result.command}" → ${result.message}'
+                : result.message;
+          });
+
+          // Play TTS response if available
+          if (result.ttsAudio != null) {
+            await _audioService.playAudioBase64(result.ttsAudio!);
+          }
+
+          if (!result.success) {
+            _showError(result.message);
+          }
+        }
+      } else {
+        // PC microphone - stop PC recording and process
         final result = await ref
             .read(bridgeProvider.notifier)
-            .sendAudioCommand(audioData);
+            .stopPcRecording();
 
         setState(() {
           _lastResult = result.success
@@ -185,7 +241,7 @@ class _PTTButtonState extends ConsumerState<PTTButton>
               : result.message;
         });
 
-        // Play TTS response if available
+        // Play TTS response if available (Bridge will handle TTS)
         if (result.ttsAudio != null) {
           await _audioService.playAudioBase64(result.ttsAudio!);
         }

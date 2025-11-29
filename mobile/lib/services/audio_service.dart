@@ -19,7 +19,12 @@ class AudioService {
   bool _isRecording = false;
   String? _currentRecordingPath;
 
+  // Streaming mode
+  bool _isStreaming = false;
+  StreamController<Uint8List>? _streamController;
+
   bool get isRecording => _isRecording;
+  bool get isStreaming => _isStreaming;
 
   /// Check and request microphone permission.
   Future<bool> requestPermission() async {
@@ -177,8 +182,41 @@ class AudioService {
   /// Listen for playback completion.
   Stream<void> get onPlayerComplete => _player.onPlayerComplete;
 
+  /// Start streaming audio (for VAD on server).
+  /// Returns stream of audio chunks (PCM16, 16kHz, mono).
+  Future<Stream<Uint8List>?> startStreaming() async {
+    if (_isStreaming) return null;
+
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
+      throw Exception('Microphone permission not granted');
+    }
+
+    // Use record package's built-in streaming
+    final stream = await _recorder.startStream(
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,  // Raw PCM16 for streaming
+        sampleRate: 16000,
+        numChannels: 1,
+      ),
+    );
+
+    _isStreaming = true;
+    return stream;
+  }
+
+  /// Stop streaming audio.
+  Future<void> stopStreaming() async {
+    if (!_isStreaming) return;
+
+    await _recorder.stop();
+    _isStreaming = false;
+  }
+
   void dispose() {
     _recorder.dispose();
     _player.dispose();
+    _streamController?.close();
   }
 }
+

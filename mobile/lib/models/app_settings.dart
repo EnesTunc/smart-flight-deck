@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
+/// Audio source selection
+enum AudioSource {
+  phone,  // Phone microphone
+  pc,     // PC microphone
+}
+
 /// Application settings model
 /// Stores user preferences and sync with Bridge
 class AppSettings {
   // Audio
+  final AudioSource audioSource;
   final double micSensitivity;
   final String ttsVoice;
   final double ttsVolume;
@@ -17,6 +24,7 @@ class AppSettings {
   final ThemeMode themeMode;
 
   const AppSettings({
+    this.audioSource = AudioSource.phone,
     this.micSensitivity = 0.5,
     this.ttsVoice = 'ljspeech',
     this.ttsVolume = 0.8,
@@ -29,6 +37,7 @@ class AppSettings {
   /// Create from JSON (SharedPreferences)
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     return AppSettings(
+      audioSource: _audioSourceFromString(json['audio_source'] ?? 'phone'),
       micSensitivity: json['mic_sensitivity'] ?? 0.5,
       ttsVoice: json['tts_voice'] ?? 'ljspeech',
       ttsVolume: json['tts_volume'] ?? 0.8,
@@ -42,6 +51,7 @@ class AppSettings {
   /// Convert to JSON (SharedPreferences)
   Map<String, dynamic> toJson() {
     return {
+      'audio_source': audioSource.name,
       'mic_sensitivity': micSensitivity,
       'tts_voice': ttsVoice,
       'tts_volume': ttsVolume,
@@ -54,6 +64,7 @@ class AppSettings {
 
   /// Copy with modifications
   AppSettings copyWith({
+    AudioSource? audioSource,
     double? micSensitivity,
     String? ttsVoice,
     double? ttsVolume,
@@ -63,6 +74,7 @@ class AppSettings {
     ThemeMode? themeMode,
   }) {
     return AppSettings(
+      audioSource: audioSource ?? this.audioSource,
       micSensitivity: micSensitivity ?? this.micSensitivity,
       ttsVoice: ttsVoice ?? this.ttsVoice,
       ttsVolume: ttsVolume ?? this.ttsVolume,
@@ -81,6 +93,17 @@ class AppSettings {
         return ThemeMode.dark;
       default:
         return ThemeMode.dark;
+    }
+  }
+
+  static AudioSource _audioSourceFromString(String source) {
+    switch (source) {
+      case 'phone':
+        return AudioSource.phone;
+      case 'pc':
+        return AudioSource.pc;
+      default:
+        return AudioSource.phone;
     }
   }
 }

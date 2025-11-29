@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'screens/home_screen.dart';
+import 'providers/settings_provider.dart';
 
 /// Main application widget
 class SmartFlightDeckApp extends ConsumerWidget {
@@ -10,14 +11,17 @@ class SmartFlightDeckApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch theme mode from settings
+    final settings = ref.watch(settingsProvider);
+
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
 
-      // Theme
-      theme: AppTheme.darkTheme,
+      // Theme - now dynamic based on user settings
+      theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark, // Always dark for cockpit use
+      themeMode: settings.themeMode,
 
       // Home
       home: const HomeScreen(),

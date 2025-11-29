@@ -51,7 +51,7 @@ class Settings(BaseSettings):
 
     # Security
     session_token_expiry: int = Field(
-        default=600, description="QR session token expiry in seconds"
+        default=86400, description="QR session token expiry in seconds (24 hours)"
     )
 
     class Config:

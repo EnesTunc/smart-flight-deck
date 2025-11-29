@@ -4,6 +4,7 @@ Manages connection to Microsoft Flight Simulator.
 """
 
 import logging
+import math
 from typing import Optional, Callable
 from dataclasses import dataclass
 
@@ -25,7 +26,7 @@ class AircraftState:
     longitude: float = 0.0
     altitude: float = 0.0  # feet MSL
     altitude_agl: float = 0.0  # feet AGL
-    heading: float = 0.0  # degrees true
+    heading: float = 0.0  # degrees magnetic
     track: float = 0.0  # degrees GPS ground track
 
     # Speed
@@ -73,7 +74,10 @@ class SimConnection:
     def __init__(self):
         self._connected = False
         self._sim = None
+        self._aircraft_requests = None
+        self._last_aircraft_title = ""
         self._aircraft_state = AircraftState()
+        self._last_valid_state = None  # Keep last good state for pause/menu
         self._on_state_change: Optional[Callable] = None
 
     def connect(self) -> bool:
@@ -84,11 +88,10 @@ class SimConnection:
             True if connection successful
         """
         try:
-            from SimConnect import SimConnect, AircraftRequests
+            from SimConnect import SimConnect
 
             logger.info("Connecting to MSFS...")
             self._sim = SimConnect()
-            self._aircraft_requests = AircraftRequests(self._sim, _time=200)
             self._connected = True
             logger.info("Connected to MSFS successfully")
             return True
@@ -107,8 +110,62 @@ class SimConnection:
                 logger.error(f"Error disconnecting: {e}")
             finally:
                 self._sim = None
+                self._aircraft_requests = None
+                self._last_aircraft_title = ""
+                self._last_valid_state = None
                 self._connected = False
                 logger.info("Disconnected from MSFS")
+
+    def _calculate_fuel_percent(self, fuel_kg: float) -> float:
+        """
+        Calculate fuel percentage from fuel quantity and capacity.
+
+        Args:
+            fuel_kg: Current fuel quantity in kg
+
+        Returns:
+            Fuel percentage (0-100)
+        """
+        try:
+            if not self._sim or not self._aircraft_requests:
+                return 0.0
+
+            # Use cached AircraftRequests to avoid object overflow
+            ar = self._aircraft_requests
+
+            # Try to get fuel capacity (different SimVars for different aircraft)
+            fuel_capacity_gallons = None
+
+            # Method 1: Try FUEL_TOTAL_CAPACITY (works for most aircraft)
+            try:
+                fuel_capacity_gallons = ar.get("FUEL_TOTAL_CAPACITY")
+            except:
+                pass
+
+            # Method 2: Try FUEL_TANK_*_CAPACITY and sum them
+            if not fuel_capacity_gallons or fuel_capacity_gallons <= 0:
+                try:
+                    center = ar.get("FUEL_TANK_CENTER_CAPACITY") or 0
+                    left = ar.get("FUEL_TANK_LEFT_MAIN_CAPACITY") or 0
+                    right = ar.get("FUEL_TANK_RIGHT_MAIN_CAPACITY") or 0
+                    fuel_capacity_gallons = center + left + right
+                except:
+                    pass
+
+            if not fuel_capacity_gallons or fuel_capacity_gallons <= 0:
+                logger.debug("Could not get fuel capacity, returning 0%")
+                return 0.0
+
+            # Convert capacity to kg (1 gallon jet fuel ≈ 3.02 kg)
+            fuel_capacity_kg = fuel_capacity_gallons * 3.02
+
+            # Calculate percentage
+            percent = (fuel_kg / fuel_capacity_kg) * 100.0
+            return min(100.0, max(0.0, percent))  # Clamp to 0-100
+
+        except Exception as e:
+            logger.debug(f"Error calculating fuel percent: {e}")
+            return 0.0
 
     def update_state(self) -> AircraftState:
         """
@@ -121,12 +178,27 @@ class SimConnection:
             return AircraftState(connected=False)
 
         try:
+            from SimConnect import AircraftRequests
+
+            # Create or reuse AircraftRequests with caching
+            if self._aircraft_requests is None:
+                self._aircraft_requests = AircraftRequests(self._sim, _time=200)
+
             ar = self._aircraft_requests
 
-            # Get aircraft title and decode if bytes
-            title = ar.get("TITLE") or "Unknown"
-            if isinstance(title, bytes):
-                title = title.decode('utf-8', errors='ignore')
+            # Get current aircraft title to detect flight changes
+            current_title = ar.get("TITLE") or "Unknown"
+            if isinstance(current_title, bytes):
+                current_title = current_title.decode('utf-8', errors='ignore')
+
+            # If aircraft changed, recreate AircraftRequests
+            if current_title != self._last_aircraft_title and self._last_aircraft_title != "":
+                logger.info(f"Aircraft changed: {self._last_aircraft_title} -> {current_title}")
+                self._aircraft_requests = AircraftRequests(self._sim, _time=200)
+                ar = self._aircraft_requests
+
+            self._last_aircraft_title = current_title
+            title = current_title
 
             # Helper function to safely decode string values
             def decode_str(value, default=""):
@@ -137,9 +209,13 @@ class SimConnection:
                 return str(value)
 
             # Helper function to safely get float values
-            def get_float(name, default=0.0):
+            def get_float(name, default=0.0, unit=None):
                 try:
-                    val = ar.get(name)
+                    # If unit specified, use it (important for angles!)
+                    if unit:
+                        val = ar.get((name, unit))
+                    else:
+                        val = ar.get(name)
                     return float(val) if val is not None else default
                 except (TypeError, ValueError):
                     return default
@@ -174,8 +250,8 @@ class SimConnection:
                 longitude=get_float("PLANE_LONGITUDE"),
                 altitude=get_float("PLANE_ALTITUDE"),
                 altitude_agl=get_float("PLANE_ALT_ABOVE_GROUND"),
-                heading=get_float("PLANE_HEADING_DEGREES_TRUE"),
-                track=get_float("GPS_GROUND_TRUE_TRACK"),
+                heading=math.degrees(get_float("PLANE_HEADING_DEGREES_MAGNETIC")),  # Convert radians to degrees
+                track=math.degrees(get_float("GPS_GROUND_TRUE_TRACK")),  # Convert radians to degrees
 
                 # Speed
                 indicated_airspeed=get_float("AIRSPEED_INDICATED"),
@@ -195,7 +271,7 @@ class SimConnection:
                 # Fuel
                 fuel_total_kg=fuel_kg,
                 fuel_flow_kg_h=fuel_flow_kg_h,
-                fuel_percent=get_float("FUEL_TOTAL_CAPACITY_PERCENT"),
+                fuel_percent=self._calculate_fuel_percent(fuel_kg),
 
                 # Navigation
                 nav1_freq=get_float("NAV_ACTIVE_FREQUENCY:1"),
@@ -212,11 +288,19 @@ class SimConnection:
                 qnh=qnh_mbar,
             )
 
+            # Save as last valid state (for pause/menu scenarios)
+            self._last_valid_state = self._aircraft_state
             return self._aircraft_state
 
         except Exception as e:
             logger.error(f"Error updating state: {e}")
-            # Connection lost - reset state
+
+            # If we have a valid last state, return it (MSFS paused or in menu)
+            if self._last_valid_state is not None:
+                logger.debug("Returning last valid state (MSFS paused or in menu)")
+                return self._last_valid_state
+
+            # No valid state - connection truly lost
             self._connected = False
             self._aircraft_state = AircraftState(connected=False)
             return self._aircraft_state

@@ -17,15 +17,17 @@ piper-tts==1.2.0
 
 # Audio Processing
 sounddevice==0.4.6
-numpy==1.26.3
-scipy==1.12.0
+numpy>=2.0.0
+scipy>=1.14.0
+torch>=2.6.0
+torchaudio>=2.6.0
 
 # SimConnect (MSFS)
 SimConnect==0.4.26
 
 # Configuration & Utils
-pydantic==2.5.3
-pydantic-settings==2.1.0
+pydantic>=2.10.0
+pydantic-settings>=2.1.0
 python-dotenv==1.0.0
 
 # QR Code Generation
@@ -43,4 +45,4 @@ black==24.1.0
 ruff==0.1.14
 
 # Packaging
-pyinstaller==6.3.0
+pyinstaller>=6.10.0

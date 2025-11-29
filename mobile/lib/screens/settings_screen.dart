@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import '../providers/settings_provider.dart';
 import '../models/app_settings.dart';
+import '../widgets/voice_manager.dart';
 
 /// Settings Screen
 /// Aviation-themed settings with dark UI and green accents
@@ -16,27 +17,61 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _selectedVoiceForPreview;
 
+  // Helper method for theme-aware colors
+  Color _getTextColor(BuildContext context, {double opacity = 1.0}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return isDark ? Colors.white.withOpacity(opacity) : Colors.black.withOpacity(opacity);
+  }
+
+  Color _getSecondaryTextColor(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return isDark ? Colors.white54 : Colors.black54;
+  }
+
+  Color _getAccentColor(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return isDark ? const Color(0xFF00E676) : theme.primaryColor;
+  }
+
+  Color _getCardColor(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return isDark ? const Color(0xFF0A0E27) : const Color(0xFFF5F5F5);
+  }
+
+  Color _getDividerColor(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return isDark ? const Color(0xFF2A2F4A) : const Color(0xFFE0E0E0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final voicesAsync = ref.watch(availableVoicesProvider);
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1F3A),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'SETTINGS',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
-            color: Color(0xFF00E676),
+            color: isDark ? const Color(0xFF00E676) : theme.primaryColor,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white70),
+          icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface.withOpacity(0.7)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -47,12 +82,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildSectionHeader('AUDIO & HAPTICS'),
           const SizedBox(height: 12),
           _buildSettingsCard([
+            _buildAudioSourceSelector(settings),
+            Divider(color: _getDividerColor(context), height: 24),
             _buildMicSensitivitySlider(settings),
-            const Divider(color: Color(0xFF2A2F4A), height: 24),
-            _buildTtsVoiceDropdown(settings, voicesAsync),
-            const Divider(color: Color(0xFF2A2F4A), height: 24),
+            Divider(color: _getDividerColor(context), height: 24),
+            const VoiceManager(), // New voice management widget
+            Divider(color: _getDividerColor(context), height: 24),
             _buildTtsVolumeSlider(settings),
-            const Divider(color: Color(0xFF2A2F4A), height: 24),
+            Divider(color: _getDividerColor(context), height: 24),
             _buildHapticToggle(settings),
           ]),
 
@@ -86,27 +123,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildSectionHeader(String title) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.5,
-          color: Color(0xFF00E676),
+          color: isDark ? const Color(0xFF00E676) : theme.primaryColor,
         ),
       ),
     );
   }
 
   Widget _buildSettingsCard(List<Widget> children) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1F3A),
+        color: isDark ? const Color(0xFF1A1F3A) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF2A2F4A),
+          color: isDark ? const Color(0xFF2A2F4A) : const Color(0xFFE0E0E0),
           width: 1,
         ),
       ),
@@ -118,6 +161,103 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildAudioSourceSelector(AppSettings settings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Audio Source',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: _getTextColor(context),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildAudioSourceOption(
+                icon: Icons.phone_android,
+                label: 'Phone Mic',
+                selected: settings.audioSource == AudioSource.phone,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setAudioSource(AudioSource.phone);
+                  if (settings.hapticFeedback) {
+                    HapticFeedback.selectionClick();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildAudioSourceOption(
+                icon: Icons.computer,
+                label: 'PC Mic',
+                selected: settings.audioSource == AudioSource.pc,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setAudioSource(AudioSource.pc);
+                  if (settings.hapticFeedback) {
+                    HapticFeedback.selectionClick();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAudioSourceOption({
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF00E676).withOpacity(0.15)
+              : _getCardColor(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF00E676)
+                : _getDividerColor(context),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: selected
+                  ? const Color(0xFF00E676)
+                  : _getSecondaryTextColor(context),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected
+                    ? const Color(0xFF00E676)
+                    : _getTextColor(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMicSensitivitySlider(AppSettings settings) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,20 +265,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Microphone Sensitivity',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: _getTextColor(context),
               ),
             ),
             Text(
               '${(settings.micSensitivity * 100).round()}%',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF00E676),
+                color: _getAccentColor(context),
               ),
             ),
           ],
@@ -159,7 +299,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             divisions: 20,
             onChanged: (value) {
               ref.read(settingsProvider.notifier).setMicSensitivity(value);
-              HapticFeedback.selectionClick();
+              if (settings.hapticFeedback) {
+                HapticFeedback.selectionClick();
+              }
             },
           ),
         ),
@@ -171,21 +313,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'TTS Voice',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: _getTextColor(context),
           ),
         ),
         const SizedBox(height: 8),
         voicesAsync.when(
           data: (voices) {
             if (voices.isEmpty) {
-              return const Text(
+              return Text(
                 'No voices available',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(color: _getSecondaryTextColor(context)),
               );
             }
 
@@ -199,17 +341,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 // Voice dropdown
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0A0E27),
+                    color: _getCardColor(context),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF2A2F4A)),
+                    border: Border.all(color: _getDividerColor(context)),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: settings.ttsVoice,
                       isExpanded: true,
-                      dropdownColor: const Color(0xFF1A1F3A),
-                      style: const TextStyle(color: Colors.white),
+                      dropdownColor: _getCardColor(context),
+                      style: TextStyle(color: _getTextColor(context)),
                       items: voices.map((voice) {
                         return DropdownMenuItem<String>(
                           value: voice.id,
@@ -285,7 +427,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         }
 
                         await ref.read(settingsProvider.notifier).setTtsVoice(voiceId);
-                        if (mounted) {
+                        if (mounted && settings.hapticFeedback) {
                           HapticFeedback.mediumImpact();
                         }
                       },
@@ -400,10 +542,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _previewVoice(String voiceId) async {
+    final settings = ref.read(settingsProvider);
+
     // TODO: Implement TTS preview playback
     // This will call the Bridge API /api/tts/preview endpoint
     if (mounted) {
-      HapticFeedback.lightImpact();
+      if (settings.hapticFeedback) {
+        HapticFeedback.lightImpact();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Playing preview for $voiceId'),
@@ -421,20 +567,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'TTS Volume',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: _getTextColor(context),
               ),
             ),
             Text(
               '${(settings.ttsVolume * 100).round()}%',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF00E676),
+                color: _getAccentColor(context),
               ),
             ),
           ],
@@ -455,7 +601,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             divisions: 20,
             onChanged: (value) {
               ref.read(settingsProvider.notifier).setTtsVolume(value);
-              HapticFeedback.selectionClick();
+              if (settings.hapticFeedback) {
+                HapticFeedback.selectionClick();
+              }
             },
           ),
         ),
@@ -467,17 +615,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           'Haptic Feedback',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: _getTextColor(context),
           ),
         ),
         Switch(
           value: settings.hapticFeedback,
-          activeColor: const Color(0xFF00E676),
+          activeColor: _getAccentColor(context),
           onChanged: (value) {
             ref.read(settingsProvider.notifier).setHapticFeedback(value);
             if (value) {
@@ -493,7 +641,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -501,25 +649,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: _getTextColor(context),
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               'Verify checklist items via SimConnect',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white54,
+                color: _getSecondaryTextColor(context),
               ),
             ),
           ],
         ),
         Switch(
           value: settings.autoVerification,
-          activeColor: const Color(0xFF00E676),
+          activeColor: _getAccentColor(context),
           onChanged: (value) {
             ref.read(settingsProvider.notifier).setAutoVerification(value);
-            HapticFeedback.selectionClick();
+            if (settings.hapticFeedback) {
+              HapticFeedback.selectionClick();
+            }
           },
         ),
       ],
@@ -530,7 +680,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -538,25 +688,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: _getTextColor(context),
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               'Enable TTS responses',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white54,
+                color: _getSecondaryTextColor(context),
               ),
             ),
           ],
         ),
         Switch(
           value: settings.voiceAnnouncements,
-          activeColor: const Color(0xFF00E676),
+          activeColor: _getAccentColor(context),
           onChanged: (value) {
             ref.read(settingsProvider.notifier).setVoiceAnnouncements(value);
-            HapticFeedback.selectionClick();
+            if (settings.hapticFeedback) {
+              HapticFeedback.selectionClick();
+            }
           },
         ),
       ],
@@ -567,28 +719,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Theme',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: _getTextColor(context),
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0E27),
+            color: _getCardColor(context),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFF2A2F4A)),
+            border: Border.all(color: _getDividerColor(context)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<ThemeMode>(
               value: settings.themeMode,
               isExpanded: true,
-              dropdownColor: const Color(0xFF1A1F3A),
-              style: const TextStyle(color: Colors.white),
+              dropdownColor: _getCardColor(context),
+              style: TextStyle(color: _getTextColor(context)),
               items: const [
                 DropdownMenuItem(
                   value: ThemeMode.dark,
@@ -614,7 +766,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onChanged: (mode) {
                 if (mode != null) {
                   ref.read(settingsProvider.notifier).setThemeMode(mode);
-                  HapticFeedback.mediumImpact();
+                  if (settings.hapticFeedback) {
+                    HapticFeedback.mediumImpact();
+                  }
                 }
               },
             ),
@@ -625,23 +779,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildFooter() {
-    return const Padding(
-      padding: EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           Text(
             'Smart Flight Deck Companion',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white38,
+              color: _getTextColor(context, opacity: 0.4),
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
-            'v1.0.0 (MVP)',
+            'v1.0.0',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.white24,
+              color: _getTextColor(context, opacity: 0.3),
             ),
           ),
         ],

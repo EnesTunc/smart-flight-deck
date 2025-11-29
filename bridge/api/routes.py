@@ -7,6 +7,7 @@ import io
 import base64
 from datetime import datetime, timedelta
 from typing import Optional
+from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 from pydantic import BaseModel
@@ -14,11 +15,15 @@ from pydantic import BaseModel
 import qrcode
 from config import settings, get_local_ip
 from sim.connection import SimConnection
+from audio.pc_recorder import PcRecorder
 
 router = APIRouter()
 
 # Global SimConnect instance
 _sim_connection: SimConnection = None
+
+# Global PC recorder instance
+_pc_recorder: Optional[PcRecorder] = None
 
 
 def get_sim_connection() -> SimConnection:
@@ -35,6 +40,14 @@ def try_connect_sim():
     if not sim.is_connected:
         sim.connect()
     return sim.is_connected
+
+
+def get_pc_recorder() -> PcRecorder:
+    """Get or create PC recorder instance."""
+    global _pc_recorder
+    if _pc_recorder is None:
+        _pc_recorder = PcRecorder(sample_rate=16000, channels=1)
+    return _pc_recorder
 
 
 # ===========================
@@ -245,6 +258,96 @@ async def process_command(
         message="Gear is down",
         tts_audio=None,  # TODO: Base64 TTS audio
     )
+
+
+# ===========================
+# PC Microphone Recording
+# ===========================
+
+
+@router.post("/audio/pc/start")
+async def start_pc_recording(x_session_token: str = Header(...)):
+    """Start recording from PC microphone."""
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    recorder = get_pc_recorder()
+
+    if recorder.is_recording:
+        return {"success": False, "message": "Already recording"}
+
+    # Start recording
+    success = recorder.start_recording()
+
+    if success:
+        return {"success": True, "message": "PC recording started"}
+    else:
+        return {"success": False, "message": "Failed to start PC recording"}
+
+
+@router.post("/audio/pc/stop", response_model=CommandResult)
+async def stop_pc_recording(x_session_token: str = Header(...)):
+    """Stop PC recording and process the command."""
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    recorder = get_pc_recorder()
+
+    if not recorder.is_recording:
+        return CommandResult(
+            success=False,
+            command="",
+            message="No active recording",
+        )
+
+    # Stop recording and get WAV data
+    wav_bytes = recorder.stop_recording()
+
+    if not wav_bytes:
+        return CommandResult(
+            success=False,
+            command="",
+            message="Failed to get audio data",
+        )
+
+    # TODO: Full processing pipeline
+    # 1. Transcribe with Whisper (audio.stt.py)
+    # 2. Parse command (logic.parser.py)
+    # 3. Execute command (sim.connection.py)
+    # 4. Generate TTS response (audio.tts.py)
+    # 5. Encode TTS as base64
+
+    # For now, return placeholder
+    # In production, you would do:
+    # from audio.stt import transcribe_audio
+    # from logic.parser import parse_command
+    # text = transcribe_audio(wav_bytes)
+    # command = parse_command(text)
+    # result = execute_command(command)
+    # tts_audio = generate_tts(result.message)
+
+    return CommandResult(
+        success=True,
+        command="[PC recording received]",
+        action="NONE",
+        message=f"PC recording processed: {len(wav_bytes)} bytes",
+        tts_audio=None,
+    )
+
+
+@router.get("/audio/pc/devices")
+async def get_pc_audio_devices(x_session_token: str = Header(...)):
+    """Get list of available PC input devices."""
+    if not validate_session(x_session_token):
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    recorder = get_pc_recorder()
+
+    try:
+        devices = recorder.get_available_devices()
+        return {"success": True, "devices": devices}
+    except Exception as e:
+        return {"success": False, "message": f"Failed to get devices: {e}", "devices": []}
 
 
 # ===========================
@@ -1167,7 +1270,7 @@ class SettingsUpdate(BaseModel):
     verification_enabled: Optional[bool] = None
 
 
-@router.get("/api/tts/voices")
+@router.get("/tts/voices")
 async def get_tts_voices():
     """
     Get list of available TTS voices with installation status.
@@ -1198,7 +1301,7 @@ async def get_tts_voices():
     }
 
 
-@router.post("/api/tts/preview")
+@router.post("/tts/preview")
 async def preview_tts_voice(
     voice_id: str,
     text: Optional[str] = "Welcome to Smart Flight Deck Companion",
@@ -1238,7 +1341,7 @@ async def preview_tts_voice(
     }
 
 
-@router.get("/api/settings")
+@router.get("/settings")
 async def get_settings(x_session_token: str = Header(...)):
     """
     Get current Bridge settings.
@@ -1263,7 +1366,7 @@ async def get_settings(x_session_token: str = Header(...)):
     }
 
 
-@router.put("/api/settings")
+@router.put("/settings")
 async def update_settings(
     updates: SettingsUpdate,
     x_session_token: str = Header(...),
@@ -1313,7 +1416,7 @@ async def update_settings(
     }
 
 
-@router.post("/api/tts/download")
+@router.post("/tts/download")
 async def download_tts_voice(
     voice_id: str,
     x_session_token: str = Header(...),
@@ -1389,7 +1492,7 @@ async def download_tts_voice(
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
 
-@router.get("/api/version")
+@router.get("/version")
 async def get_version():
     """
     Get Bridge version information.
