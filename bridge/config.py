@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # Whisper STT
     whisper_model: str = Field(
-        default="base.en",
+        default="small.en",
         description="Whisper model size: tiny.en, base.en, small.en",
     )
     whisper_device: str = Field(

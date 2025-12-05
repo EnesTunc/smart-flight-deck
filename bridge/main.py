@@ -35,8 +35,20 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 50)
 
     # TODO: Initialize SimConnect
-    # TODO: Load Whisper model
-    # TODO: Load Piper TTS
+
+    # Load TTS on startup (fixes "TTS not loaded" error)
+    logger.info("Loading TTS system...")
+    from api.routes import get_piper_tts
+    try:
+        tts = get_piper_tts()
+        if tts.load():
+            logger.info(f"✅ TTS loaded successfully: {tts.voice}")
+        else:
+            logger.warning("⚠️ TTS load failed")
+    except Exception as e:
+        logger.warning(f"⚠️ TTS load error: {e}")
+
+    # TODO: Load Whisper model (lazy loading - first API call)
 
     yield
 

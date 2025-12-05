@@ -96,9 +96,10 @@ class PiperTTS:
             logger.info(f"Loading Piper TTS voice: {voice_info['display_name']}")
             logger.info(f"Model path: {model_path}")
 
-            # TODO: Implement actual Piper loading
-            # from piper import PiperVoice
-            # self._piper = PiperVoice.load(model_path)
+            # Load Piper voice
+            from piper import PiperVoice
+            config_path = model_path.with_suffix('.onnx.json')
+            self._piper = PiperVoice.load(str(model_path), str(config_path))
 
             self._loaded = True
             logger.info(f"Piper TTS loaded: {voice_info['display_name']} ({voice_info['license']})")
@@ -122,14 +123,18 @@ class PiperTTS:
             raise RuntimeError("TTS not loaded. Call load() first.")
 
         try:
-            # TODO: Implement actual Piper synthesis
-            # audio_data = self._piper.synthesize(text)
-
-            # For now, return empty placeholder
             logger.debug(f"Synthesizing: '{text}'")
 
-            # Create a silent WAV as placeholder
-            return self._create_silent_wav(duration=1.0)
+            # Create WAV file in memory
+            buffer = io.BytesIO()
+            with wave.open(buffer, "wb") as wav_file:
+                # Piper will write directly to this WAV file
+                self._piper.synthesize_wav(text, wav_file)
+
+            # Get WAV bytes
+            audio_bytes = buffer.getvalue()
+            logger.info(f"✅ TTS Generated {len(audio_bytes)} bytes for: '{text}'")
+            return audio_bytes
 
         except Exception as e:
             logger.error(f"TTS synthesis failed: {e}")
@@ -156,6 +161,21 @@ class PiperTTS:
         except Exception as e:
             logger.error(f"Failed to save TTS audio: {e}")
             return False
+
+    def _create_wav_with_header(
+        self,
+        audio_data: bytes,
+        sample_rate: int = 22050,
+    ) -> bytes:
+        """Create a WAV file with proper header from raw audio data."""
+        buffer = io.BytesIO()
+        with wave.open(buffer, "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(audio_data)
+
+        return buffer.getvalue()
 
     def _create_silent_wav(
         self,

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +28,7 @@ class _PTTButtonState extends ConsumerState<PTTButton>
   bool _isProcessing = false;
   String? _lastResult;
   late AnimationController _pulseController;
+  StreamSubscription<Uint8List>? _audioStreamSubscription;
 
   @override
   void initState() {
@@ -33,10 +37,23 @@ class _PTTButtonState extends ConsumerState<PTTButton>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
+
+    // Listen for command results from WebSocket (VAD detections)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.listen<Map<String, dynamic>?>(
+        lastCommandResultProvider,
+        (previous, next) {
+          if (next != null && mounted) {
+            _handleCommandResult(next);
+          }
+        },
+      );
+    });
   }
 
   @override
   void dispose() {
+    _audioStreamSubscription?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -124,7 +141,7 @@ class _PTTButtonState extends ConsumerState<PTTButton>
 
   String _getStatusText(bool isConnected) {
     if (!isConnected) return 'Connect to use voice';
-    if (_isRecording) return 'Recording... (Tap to stop)';
+    if (_isRecording) return 'Listening... (Tap to stop)';
     if (_isProcessing) return 'Processing...';
     return 'Tap to activate mic';
   }
@@ -166,16 +183,31 @@ class _PTTButtonState extends ConsumerState<PTTButton>
     try {
       // Check audio source
       if (settings.audioSource == AudioSource.phone) {
-        // Phone microphone - record locally
-        await _audioService.startRecording();
+        // Phone microphone - start streaming mode with VAD
+        ref.read(bridgeProvider.notifier).startAudioStreaming();
+
+        final audioStream = await _audioService.startStreaming();
+        if (audioStream != null) {
+          _audioStreamSubscription = audioStream.listen(
+            (audioChunk) {
+              // Send each chunk to bridge for VAD processing
+              ref.read(bridgeProvider.notifier).sendAudioChunk(audioChunk);
+            },
+            onError: (error) {
+              _showError('Streaming error: $error');
+              _stopRecording();
+            },
+            cancelOnError: true,
+          );
+        }
       } else {
-        // PC microphone - signal Bridge to start recording
+        // PC microphone - start PC streaming with VAD
         final success = await ref
             .read(bridgeProvider.notifier)
-            .startPcRecording();
+            .startPcStreaming();
 
         if (!success) {
-          _showError('Failed to start PC recording');
+          _showError('Failed to start PC microphone');
           return;
         }
       }
@@ -200,72 +232,69 @@ class _PTTButtonState extends ConsumerState<PTTButton>
 
     setState(() {
       _isRecording = false;
-      _isProcessing = true;
     });
 
     try {
       if (settings.audioSource == AudioSource.phone) {
-        // Phone microphone - get local recording
-        final audioData = await _audioService.stopRecording();
+        // Phone microphone - stop streaming
+        await _audioStreamSubscription?.cancel();
+        _audioStreamSubscription = null;
 
-        if (audioData != null && audioData.isNotEmpty) {
-          // Send to bridge for processing
-          final result = await ref
-              .read(bridgeProvider.notifier)
-              .sendAudioCommand(audioData);
-
-          setState(() {
-            _lastResult = result.success
-                ? '"${result.command}" → ${result.message}'
-                : result.message;
-          });
-
-          // Play TTS response if available
-          if (result.ttsAudio != null) {
-            await _audioService.playAudioBase64(result.ttsAudio!);
-          }
-
-          if (!result.success) {
-            _showError(result.message);
-          }
-        }
+        await _audioService.stopStreaming();
+        ref.read(bridgeProvider.notifier).stopAudioStreaming();
       } else {
-        // PC microphone - stop PC recording and process
-        final result = await ref
-            .read(bridgeProvider.notifier)
-            .stopPcRecording();
-
-        setState(() {
-          _lastResult = result.success
-              ? '"${result.command}" → ${result.message}'
-              : result.message;
-        });
-
-        // Play TTS response if available (Bridge will handle TTS)
-        if (result.ttsAudio != null) {
-          await _audioService.playAudioBase64(result.ttsAudio!);
-        }
-
-        if (!result.success) {
-          _showError(result.message);
-        }
+        // PC microphone - stop PC streaming
+        await ref.read(bridgeProvider.notifier).stopPcStreaming();
       }
     } catch (e) {
-      _showError('Failed to process command: $e');
-    } finally {
-      setState(() {
-        _isProcessing = false;
-      });
+      _showError('Failed to stop recording: $e');
     }
   }
 
   Future<void> _cancelRecording() async {
     if (!_isRecording) return;
 
-    await _audioService.cancelRecording();
+    await _audioStreamSubscription?.cancel();
+    _audioStreamSubscription = null;
+
+    await _audioService.stopStreaming();
+    ref.read(bridgeProvider.notifier).stopAudioStreaming();
+
     setState(() {
       _isRecording = false;
     });
+  }
+
+  void _handleCommandResult(Map<String, dynamic> result) {
+    final success = result['success'] as bool? ?? false;
+    final command = result['command'] as String? ?? '';
+    final message = result['message'] as String? ?? '';
+    final ttsAudio = result['tts_audio'] as String?;
+
+    print('📱 [PTT] Command result received: success=$success, command="$command"');
+    print('📱 [PTT] TTS audio present: ${ttsAudio != null}, length: ${ttsAudio?.length ?? 0}');
+
+    setState(() {
+      _lastResult = success
+          ? '"$command" → $message'
+          : message;
+    });
+
+    // Play TTS response if available
+    if (ttsAudio != null && ttsAudio.isNotEmpty) {
+      print('📱 [PTT] Calling playAudioBase64...');
+      _audioService.playAudioBase64(ttsAudio).catchError((e) {
+        print('❌ [PTT] Failed to play TTS: $e');
+        debugPrint('Failed to play TTS: $e');
+      });
+    } else {
+      print('⚠️ [PTT] No TTS audio to play');
+    }
+
+    // Show error if command failed
+    if (!success) {
+      _showError(message);
+    }
   }
 
   void _showError(String message) {

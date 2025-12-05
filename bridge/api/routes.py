@@ -16,6 +16,10 @@ import qrcode
 from config import settings, get_local_ip
 from sim.connection import SimConnection
 from audio.pc_recorder import PcRecorder
+from audio.stt import WhisperSTT
+from audio.tts import PiperTTS
+from logic.parser import CommandParser
+from logic.commands import CommandRegistry
 
 router = APIRouter()
 
@@ -24,6 +28,15 @@ _sim_connection: SimConnection = None
 
 # Global PC recorder instance
 _pc_recorder: Optional[PcRecorder] = None
+
+# Global STT instance
+_whisper_stt: Optional[WhisperSTT] = None
+
+# Global TTS instance
+_piper_tts: Optional[PiperTTS] = None
+
+# Global command parser
+_command_parser: Optional[CommandParser] = None
 
 
 def get_sim_connection() -> SimConnection:
@@ -48,6 +61,35 @@ def get_pc_recorder() -> PcRecorder:
     if _pc_recorder is None:
         _pc_recorder = PcRecorder(sample_rate=16000, channels=1)
     return _pc_recorder
+
+
+def get_whisper_stt() -> WhisperSTT:
+    """Get or create Whisper STT instance."""
+    global _whisper_stt
+    if _whisper_stt is None:
+        _whisper_stt = WhisperSTT(
+            model_size=settings.whisper_model,
+            device=settings.whisper_device,
+            compute_type="int8"
+        )
+        _whisper_stt.load()
+    return _whisper_stt
+
+
+def get_piper_tts() -> PiperTTS:
+    """Get or create Piper TTS instance."""
+    global _piper_tts
+    if _piper_tts is None:
+        _piper_tts = PiperTTS()
+    return _piper_tts
+
+
+def get_command_parser() -> CommandParser:
+    """Get or create command parser instance."""
+    global _command_parser
+    if _command_parser is None:
+        _command_parser = CommandParser()
+    return _command_parser
 
 
 # ===========================
@@ -245,19 +287,88 @@ async def process_command(
     if not validate_session(x_session_token):
         raise HTTPException(status_code=401, detail="Invalid session")
 
-    # TODO: Full pipeline implementation
-    # 1. Transcribe audio
-    # 2. Parse command
-    # 3. Execute SimConnect action
-    # 4. Generate TTS response
+    try:
+        # Save uploaded audio to temp file
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+            audio_data = await audio.read()
+            temp_audio.write(audio_data)
+            temp_audio_path = Path(temp_audio.name)
 
-    return CommandResult(
-        success=True,
-        command="gear down",
-        action="GEAR_DOWN",
-        message="Gear is down",
-        tts_audio=None,  # TODO: Base64 TTS audio
-    )
+        # 1. Transcribe audio with Whisper
+        stt = get_whisper_stt()
+        transcribed_text, confidence = stt.transcribe(temp_audio_path)
+
+        # Clean up temp file
+        temp_audio_path.unlink()
+
+        if not transcribed_text:
+            return CommandResult(
+                success=False,
+                command="",
+                message="Could not understand audio",
+            )
+
+        # 2. Parse command
+        parser = get_command_parser()
+        parsed_command = parser.parse(transcribed_text)
+
+        if not parsed_command:
+            return CommandResult(
+                success=False,
+                command=transcribed_text,
+                message=f"Unknown command: {transcribed_text}",
+            )
+
+        # Get command definition from registry
+        command_def = CommandRegistry.get(parsed_command.intent)
+        if not command_def or not command_def.sim_event:
+            return CommandResult(
+                success=False,
+                command=transcribed_text,
+                message=f"Command not found: {parsed_command.intent}",
+            )
+
+        # 3. Execute SimConnect action
+        sim = get_sim_connection()
+        if not sim.is_connected:
+            try_connect_sim()
+
+        if not sim.is_connected:
+            return CommandResult(
+                success=False,
+                command=transcribed_text,
+                message="Not connected to MSFS",
+            )
+
+        # Send event to sim
+        event_value = parsed_command.parameters.get("value", 0)
+        success = sim.send_event(command_def.sim_event, event_value)
+
+        # 4. Generate TTS response
+        tts = get_piper_tts()
+        response_text = command_def.response_template if success else "Command failed"
+        tts_wav = tts.synthesize(response_text)
+
+        # Encode TTS as base64
+        tts_base64 = base64.b64encode(tts_wav).decode("utf-8") if tts_wav else None
+
+        return CommandResult(
+            success=success,
+            command=transcribed_text,
+            action=command_def.sim_event,
+            message=response_text,
+            tts_audio=tts_base64,
+        )
+
+    except Exception as e:
+        import logging
+        logging.error(f"Command processing error: {e}")
+        return CommandResult(
+            success=False,
+            command="",
+            message=f"Processing error: {str(e)}",
+        )
 
 
 # ===========================
@@ -310,29 +421,87 @@ async def stop_pc_recording(x_session_token: str = Header(...)):
             message="Failed to get audio data",
         )
 
-    # TODO: Full processing pipeline
-    # 1. Transcribe with Whisper (audio.stt.py)
-    # 2. Parse command (logic.parser.py)
-    # 3. Execute command (sim.connection.py)
-    # 4. Generate TTS response (audio.tts.py)
-    # 5. Encode TTS as base64
+    # Process the audio through the same pipeline
+    try:
+        # Save WAV to temp file
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+            temp_audio.write(wav_bytes)
+            temp_audio_path = Path(temp_audio.name)
 
-    # For now, return placeholder
-    # In production, you would do:
-    # from audio.stt import transcribe_audio
-    # from logic.parser import parse_command
-    # text = transcribe_audio(wav_bytes)
-    # command = parse_command(text)
-    # result = execute_command(command)
-    # tts_audio = generate_tts(result.message)
+        # 1. Transcribe with Whisper
+        stt = get_whisper_stt()
+        transcribed_text, confidence = stt.transcribe(temp_audio_path)
 
-    return CommandResult(
-        success=True,
-        command="[PC recording received]",
-        action="NONE",
-        message=f"PC recording processed: {len(wav_bytes)} bytes",
-        tts_audio=None,
-    )
+        # Clean up temp file
+        temp_audio_path.unlink()
+
+        if not transcribed_text:
+            return CommandResult(
+                success=False,
+                command="",
+                message="Could not understand audio",
+            )
+
+        # 2. Parse command
+        parser = get_command_parser()
+        parsed_command = parser.parse(transcribed_text)
+
+        if not parsed_command:
+            return CommandResult(
+                success=False,
+                command=transcribed_text,
+                message=f"Unknown command: {transcribed_text}",
+            )
+
+        # Get command definition from registry
+        command_def = CommandRegistry.get(parsed_command.intent)
+        if not command_def or not command_def.sim_event:
+            return CommandResult(
+                success=False,
+                command=transcribed_text,
+                message=f"Command not found: {parsed_command.intent}",
+            )
+
+        # 3. Execute SimConnect action
+        sim = get_sim_connection()
+        if not sim.is_connected:
+            try_connect_sim()
+
+        if not sim.is_connected:
+            return CommandResult(
+                success=False,
+                command=transcribed_text,
+                message="Not connected to MSFS",
+            )
+
+        event_value = parsed_command.parameters.get("value", 0)
+        success = sim.send_event(command_def.sim_event, event_value)
+
+        # 4. Generate TTS response
+        tts = get_piper_tts()
+        response_text = command_def.response_template if success else "Command failed"
+        tts_wav = tts.synthesize(response_text)
+
+        # Encode TTS as base64
+        tts_base64 = base64.b64encode(tts_wav).decode("utf-8") if tts_wav else None
+
+        return CommandResult(
+            success=success,
+            command=transcribed_text,
+            action=command_def.sim_event,
+            message=response_text,
+            tts_audio=tts_base64,
+        )
+
+    except Exception as e:
+        import logging
+        logging.error(f"PC recording processing error: {e}")
+        return CommandResult(
+            success=False,
+            command="",
+            message=f"Processing error: {str(e)}",
+        )
 
 
 @router.get("/audio/pc/devices")

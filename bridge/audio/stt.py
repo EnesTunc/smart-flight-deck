@@ -4,6 +4,7 @@ Whisper integration for voice recognition.
 """
 
 import logging
+import math
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -19,7 +20,7 @@ class WhisperSTT:
 
     def __init__(
         self,
-        model_size: str = "base.en",
+        model_size: str = "small.en",
         device: str = "cpu",
         compute_type: str = "int8",
     ):
@@ -71,28 +72,34 @@ class WhisperSTT:
                 str(audio_path),
                 language=language,
                 beam_size=5,
-                vad_filter=True,  # Voice Activity Detection
+                vad_filter=False,  # Disable Whisper VAD - we use Silero VAD
             )
 
             # Combine all segments
             text_parts = []
-            total_confidence = 0.0
+            total_logprob = 0.0
             segment_count = 0
 
             for segment in segments:
                 text_parts.append(segment.text)
-                total_confidence += segment.avg_logprob
+                total_logprob += segment.avg_logprob
                 segment_count += 1
 
             full_text = " ".join(text_parts).strip()
-            avg_confidence = (
-                total_confidence / segment_count if segment_count > 0 else 0.0
+            avg_logprob = (
+                total_logprob / segment_count if segment_count > 0 else -3.0
             )
 
             # Convert log probability to confidence (0-1)
-            confidence = min(1.0, max(0.0, 1.0 + avg_confidence))
+            # Whisper avg_logprob range: -0.1 (excellent) to -3.0 (poor)
+            # Using exponential scaling for better distribution:
+            # -0.1 → ~0.90, -0.5 → ~0.60, -1.0 → ~0.37, -2.0 → ~0.13
+            confidence = math.exp(avg_logprob)
 
-            logger.debug(f"Transcribed: '{full_text}' (confidence: {confidence:.2f})")
+            # Clamp to [0, 1] range
+            confidence = min(1.0, max(0.0, confidence))
+
+            logger.info(f"STT: '{full_text}' | logprob={avg_logprob:.3f} | confidence={confidence:.2f} | segments={segment_count}")
             return full_text, confidence
 
         except Exception as e:

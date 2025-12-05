@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -247,10 +248,14 @@ class BridgeNotifier extends StateNotifier<BridgeConnectionState> {
   final _simDataController = StreamController<SimData>.broadcast();
   Stream<SimData> get simDataStream => _simDataController.stream;
 
+  final _commandResultController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get commandResultStream => _commandResultController.stream;
+
   @override
   void dispose() {
     _cleanup();
     _simDataController.close();
+    _commandResultController.close();
     super.dispose();
   }
 
@@ -382,6 +387,36 @@ class BridgeNotifier extends StateNotifier<BridgeConnectionState> {
     state = const BridgeConnectionState(status: ConnectionStatus.disconnected);
   }
 
+  /// Start audio streaming (for VAD)
+  void startAudioStreaming() {
+    if (_wsChannel == null) return;
+
+    _wsChannel!.sink.add(jsonEncode({
+      'type': 'audio_stream_start',
+    }));
+  }
+
+  /// Stop audio streaming
+  void stopAudioStreaming() {
+    if (_wsChannel == null) return;
+
+    _wsChannel!.sink.add(jsonEncode({
+      'type': 'audio_stream_stop',
+    }));
+  }
+
+  /// Send audio chunk (for VAD streaming)
+  void sendAudioChunk(List<int> audioData) {
+    if (_wsChannel == null) return;
+
+    final base64Audio = base64Encode(audioData);
+    _wsChannel!.sink.add(jsonEncode({
+      'type': 'audio_chunk',
+      'audio': base64Audio,
+      'sample_rate': 16000,
+    }));
+  }
+
   /// Send direct command via HTTP API
   Future<CommandResult> sendCommand(String command) async {
     if (_dio == null || !state.isConnected) {
@@ -477,6 +512,30 @@ class BridgeNotifier extends StateNotifier<BridgeConnectionState> {
     }
   }
 
+  /// Start PC microphone streaming (NEW - for VAD continuous mode)
+  Future<bool> startPcStreaming() async {
+    if (_wsChannel == null) return false;
+
+    try {
+      _wsChannel!.sink.add(jsonEncode({'type': 'pc_stream_start'}));
+      return true;
+    } catch (e) {
+      debugPrint('Failed to start PC streaming: $e');
+      return false;
+    }
+  }
+
+  /// Stop PC microphone streaming (NEW - for VAD continuous mode)
+  Future<void> stopPcStreaming() async {
+    if (_wsChannel == null) return;
+
+    try {
+      _wsChannel!.sink.add(jsonEncode({'type': 'pc_stream_stop'}));
+    } catch (e) {
+      debugPrint('Failed to stop PC streaming: $e');
+    }
+  }
+
   /// Get sim status via HTTP
   Future<SimData?> getSimStatus() async {
     if (_dio == null || !state.isConnected) return null;
@@ -500,7 +559,14 @@ class BridgeNotifier extends StateNotifier<BridgeConnectionState> {
           _simDataController.add(simData);
           break;
         case 'command_result':
-          // Could emit to a separate stream if needed
+          // Emit command result for VAD-detected commands
+          _commandResultController.add(data);
+          break;
+        case 'pc_stream_status':
+          // Handle PC streaming status messages
+          final status = data['status'] as String?;
+          final message = data['message'] as String?;
+          debugPrint('[PC Stream] $status: $message');
           break;
         case 'pong':
           // Connection alive
@@ -587,4 +653,19 @@ final isConnectedProvider = Provider<bool>((ref) {
 
 final connectionStatusProvider = Provider<ConnectionStatus>((ref) {
   return ref.watch(bridgeProvider).status;
+});
+
+final commandResultStreamProvider = StreamProvider<Map<String, dynamic>>((ref) {
+  final bridge = ref.watch(bridgeProvider.notifier);
+  return bridge.commandResultStream;
+});
+
+// Provider to get last command result from stream
+final lastCommandResultProvider = Provider<Map<String, dynamic>?>((ref) {
+  final commandResultStream = ref.watch(commandResultStreamProvider);
+  return commandResultStream.when(
+    data: (result) => result,
+    loading: () => null,
+    error: (_, __) => null,
+  );
 });

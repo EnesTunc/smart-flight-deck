@@ -7,6 +7,7 @@ import re
 import logging
 from typing import Optional, Tuple, List
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +36,12 @@ class CommandParser:
         (r"gear (down|extend)", "gear_down", {}),
         (r"gear (up|retract)", "gear_up", {}),
         (r"(lower|drop) (the )?gear", "gear_down", {}),
+        (r"(lower|drop) (the )?(landing )?gear", "gear_down", {}),  # "lower the landing gear"
         (r"(raise|retract) (the )?gear", "gear_up", {}),
         # Flaps commands
         (r"flaps? (up|zero|0)", "flaps_up", {"position": 0}),
         (r"flaps? (down|extend)", "flaps_down", {}),
+        (r"set flaps? to position (\d+)", "flaps_set", {"position": "group1"}),  # "set flaps to position 1"
         (r"flaps? (\d+)", "flaps_set", {"position": "group1"}),
         (r"flaps? (one|1)", "flaps_set", {"position": 1}),
         (r"flaps? (two|2|ten|10)", "flaps_set", {"position": 2}),
@@ -130,6 +133,7 @@ class CommandParser:
         (r"(start |run |begin )?(after landing) checklist", "checklist_start", {"checklist": "after_landing"}),
         (r"(start |run |begin )?(shutdown) checklist", "checklist_start", {"checklist": "shutdown"}),
         (r"(start |run |begin )?(cockpit prep(aration)?) checklist", "checklist_start", {"checklist": "cockpit_preparation"}),
+        (r"^checklist$", "checklist_start", {}),  # "checklist" tek kelime - genel checklist
         (r"(start |run |begin )?checklist (.+)", "checklist_start", {"checklist": "group2"}),
         # Checklist responses
         (r"^check(ed)?$", "checklist_check", {}),
@@ -197,7 +201,98 @@ class CommandParser:
                     matched_pattern=pattern.pattern,
                 )
 
+        # No exact match - try fuzzy matching for common misrecognitions
+        fuzzy_result = self._fuzzy_match(text)
+        if fuzzy_result:
+            logger.info(f"Fuzzy match: '{text}' -> '{fuzzy_result.intent}' (confidence: {fuzzy_result.confidence:.2f})")
+            return fuzzy_result
+
         logger.debug(f"No match for: '{text}'")
+        return None
+
+    def _fuzzy_match(self, text: str) -> Optional[ParsedCommand]:
+        """
+        Attempt fuzzy matching for common STT misrecognitions.
+
+        Common errors:
+        - "parking bridge" → "parking brake"
+        - "girda" → "gear down"
+        - "fleps" → "flaps"
+        """
+        # Common word substitutions for aviation terms
+        corrections = {
+            "bridge": "brake",
+            "break": "brake",
+            "breck": "brake",
+            "girda": "gear down",
+            "geardown": "gear down",
+            "girup": "gear up",
+            "gearup": "gear up",
+            "fleps": "flaps",
+            "flex": "flaps",
+            "spoliers": "spoilers",
+            "spoiller": "spoilers",
+        }
+
+        corrected_text = text
+        for wrong, correct in corrections.items():
+            if wrong in text:
+                corrected_text = text.replace(wrong, correct)
+                logger.debug(f"Fuzzy correction: '{text}' -> '{corrected_text}'")
+                break
+
+        # Try matching with corrected text
+        if corrected_text != text:
+            for pattern, intent, param_template in self._compiled:
+                match = pattern.search(corrected_text)
+                if match:
+                    parameters = {}
+                    for key, value in param_template.items():
+                        if isinstance(value, str) and value.startswith("group"):
+                            group_num = int(value.replace("group", ""))
+                            try:
+                                parameters[key] = match.group(group_num)
+                            except IndexError:
+                                parameters[key] = None
+                        else:
+                            parameters[key] = value
+
+                    return ParsedCommand(
+                        intent=intent,
+                        confidence=0.7,  # Lower confidence for fuzzy match
+                        parameters=parameters,
+                        raw_text=text,
+                        matched_pattern=f"fuzzy:{pattern.pattern}",
+                    )
+
+        # Try similarity matching with known commands
+        known_commands = [
+            ("gear down", "gear_down"),
+            ("gear up", "gear_up"),
+            ("parking brake", "parking_brake_toggle"),
+            ("flaps", "flaps_down"),
+            ("spoilers", "spoilers_on"),
+        ]
+
+        best_match = None
+        best_ratio = 0.6  # Minimum similarity threshold
+
+        for command_text, intent in known_commands:
+            ratio = SequenceMatcher(None, text, command_text).ratio()
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_match = intent
+
+        if best_match:
+            logger.debug(f"Similarity match: '{text}' -> '{best_match}' (ratio: {best_ratio:.2f})")
+            return ParsedCommand(
+                intent=best_match,
+                confidence=best_ratio * 0.8,  # Scale down confidence
+                parameters={},
+                raw_text=text,
+                matched_pattern="similarity",
+            )
+
         return None
 
     def get_suggestions(self, partial_text: str) -> List[str]:

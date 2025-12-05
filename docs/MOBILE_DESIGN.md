@@ -201,43 +201,54 @@ Sadece bir "uzaktan kumanda" degil, **tam donanimli bir Electronic Flight Bag (E
 +------------------------------------------------------------------+
 ```
 
-### 3.4 Checklist Ekrani
+### 3.4 Checklist Ekrani ✅ YENİ (PDF/Brochure Style)
 
 ```
 +------------------------------------------------------------------+
-|  [<]  BEFORE TAKEOFF CHECKLIST                    [3/7] [Voice]  |
+|  [SMART FLIGHT] | BEFORE TAKEOFF CHECKLIST | [A320neo AIRBUS]   |
+|     DECK        |                           | Phase: TAXI        |
++==================================================================+
+|                                                                  |
+|  PROGRESS: [████████░░░░] 60%  3 remaining                      |
+|                                                                  |
+|  +============================================================+  |
+|  | ▣ BEFORE TAKEOFF CHECKLIST                          60% ◀  |  |
+|  +============================================================+  |
+|  |                                                            |  |
+|  |  ✓ Flight controls ................. CHECKED       [✓]    |  |
+|  |  ✓ Flaps .......................... CONFIG 1+F      [✓]    |  |
+|  |  ⚠ Spoilers ....................... ARMED    [✓] [⚠]      |  |
+|  |     ^^^^^ Current item (highlighted background)            |  |
+|  |  [ ] Auto brake ................... MAX                    |  |
+|  |  [ ] Takeoff config ............... CHECKED                |  |
+|  |  [ ] Transponder .................. TA/RA                  |  |
+|  |                                                            |  |
+|  +============================================================+  |
+|                                                                  |
+|  +============================================================+  |
+|  | 🎤 CURRENT ITEM                                            |  |
+|  |------------------------------------------------------------|  |
+|  | "Spoilers"                                                 |  |
+|  | Expected: ARMED                                            |  |
+|  |                                                            |  |
+|  | [⚠ NOT VERIFIED] ← SimConnect/WASM doğrulama durumu       |  |
+|  | "Spoilers not armed. Say override to continue"            |  |
+|  +============================================================+  |
+|                                                                  |
+|  +--------------------------------------------------------------+|
+|  |  [  ✓ CHECK  ]      [  SKIP  ]      [ ✕ ]                   ||
+|  |   (yeşil)          (amber)        (kırmızı)                 ||
+|  +--------------------------------------------------------------+|
 +------------------------------------------------------------------+
-|                                                                    |
-|  +--------------------------------------------------------------+  |
-|  |  [x]  Flight controls ...................... CHECKED         |  |
-|  |  [x]  Flaps ............................... CONFIG 1+F       |  |
-|  |  [>]  Spoilers ............................ ARMED     <--    |  |
-|  |  [ ]  Auto brake .......................... MAX              |  |
-|  |  [ ]  Takeoff config ...................... CHECKED          |  |
-|  |  [ ]  Transponder ......................... TA/RA            |  |
-|  |  [ ]  ECAM memo ........................... TAKEOFF NO BLUE  |  |
-|  +--------------------------------------------------------------+  |
-|                                                                    |
-|  +--------------------------------------------------------------+  |
-|  |                                                              |  |
-|  |           "Spoilers"                                         |  |
-|  |                                                              |  |
-|  |    Current Status: [ARMED - VERIFIED]                        |  |
-|  |                                                              |  |
-|  +--------------------------------------------------------------+  |
-|                                                                    |
-|  +--------------------------------------------------------------+  |
-|  |                                                              |  |
-|  |    [  CHECK  ]    [  SKIP  ]    [  REPEAT  ]                |  |
-|  |                                                              |  |
-|  +--------------------------------------------------------------+  |
-|                                                                    |
-|                    +------------------------+                      |
-|                    |    [  PTT - VOICE  ]   |                      |
-|                    |    "Armed" / "Check"   |                      |
-|                    +------------------------+                      |
-|                                                                    |
-+------------------------------------------------------------------+
+
+Renk Paleti:
+- Beyaz zemin (#FFFFFF)
+- Header gri (#E0E0E0 + #F5F5F5)
+- Başlık çubuğu (#2A4B6D - kDarkBlue)
+- Onay yeşil (#00A651 - kGreen)
+- Uyarı amber (#FF8C00 - kAmber)
+- Border gri (#B0B0B0 - kBorderGrey)
+- Metin siyah (#000000 - kTextBlack)
 ```
 
 ### 3.5 Airport Info Ekrani
@@ -912,7 +923,12 @@ Entegrasyon Ne Saglar:
 | 2025-11-25 | ✅ On-demand voice download sistemi eklendi |
 | 2025-11-25 | ✅ Mic sensitivity, TTS volume slider eklendi |
 | 2025-11-25 | ✅ Theme mode toggle (Dark/Light) eklendi |
+| 2025-12-05 | ✅ **Checklist UI tamamen yenilendi - PDF/Brochure tarzı** |
+| 2025-12-05 | ✅ Beyaz zemin + noktalı çizgi satırlar + aviation renk paleti |
+| 2025-12-05 | ✅ Header: Bridge'den uçak bilgisi + Smart Flight Deck branding |
+| 2025-12-05 | ✅ Current item highlight panel (verification badge ile) |
+| 2025-12-05 | ✅ Professional aviation format (kDarkBlue, kGreen, kAmber) |
 
 ---
 
-*Son guncelleme: 2025-11-25*
+*Son guncelleme: 2025-12-05*

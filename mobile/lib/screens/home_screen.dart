@@ -7,7 +7,7 @@ import '../widgets/connection_status.dart';
 import '../widgets/ptt_button.dart';
 import '../widgets/quick_commands.dart';
 import '../widgets/sim_data_panel.dart';
-import 'checklist_screen.dart';
+import 'checklist_role_screen.dart';
 import 'flight_data_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'settings_screen.dart';
@@ -270,7 +270,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _openChecklist() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const ChecklistScreen(),
+        builder: (context) => const ChecklistRoleScreen(),
       ),
     );
   }

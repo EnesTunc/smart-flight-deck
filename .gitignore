@@ -255,3 +255,11 @@ installer/output/
 !installer/*.exe
 *.msi
 *.dmg
+
+# Local-only files (not part of the public repo)
+CLAUDE.md
+COMMERCIAL.md
+GEMINI.md
+örnek.txt
+*.backup
+bridge/packages.txt

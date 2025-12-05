@@ -106,6 +106,8 @@ class AudioService {
   /// Play audio from base64 string.
   Future<void> playAudioBase64(String base64Audio) async {
     try {
+      print('🎵 [AudioService] Received TTS audio: ${base64Audio.length} chars');
+
       // Remove data URL prefix if present
       String cleanBase64 = base64Audio;
 
@@ -117,25 +119,32 @@ class AudioService {
       // Remove any whitespace
       cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s'), '');
 
+      print('🎵 [AudioService] Cleaned base64: ${cleanBase64.length} chars');
+
       // Decode base64
       final audioBytes = base64Decode(cleanBase64);
+      print('🎵 [AudioService] Decoded audio: ${audioBytes.length} bytes');
 
       // Save to temp file and play
       final directory = await getTemporaryDirectory();
       final tempFile = File(
           '${directory.path}/tts_${DateTime.now().millisecondsSinceEpoch}.wav');
       await tempFile.writeAsBytes(audioBytes);
+      print('🎵 [AudioService] Saved to temp file: ${tempFile.path}');
 
       // Play the file
       await _player.play(DeviceFileSource(tempFile.path));
+      print('🎵 [AudioService] Started playback');
 
       // Clean up after playback
       _player.onPlayerComplete.first.then((_) async {
         if (await tempFile.exists()) {
           await tempFile.delete();
         }
+        print('🎵 [AudioService] Playback complete, temp file deleted');
       });
     } catch (e) {
+      print('❌ [AudioService] Failed to play audio: $e');
       throw Exception('Failed to play audio: $e');
     }
   }

@@ -49,9 +49,9 @@ class VadProcessor:
                 force_reload=False,
                 onnx=False
             )
-            print(f"✓ Silero VAD loaded (threshold={threshold})")
+            print(f"[OK] Silero VAD loaded (threshold={threshold})")
         except Exception as e:
-            print(f"⚠ Failed to load Silero VAD: {e}")
+            print(f"[WARN] Failed to load Silero VAD: {e}")
             print("  Using simple energy-based VAD as fallback")
             self.model = None
 
@@ -99,7 +99,7 @@ class VadProcessor:
                 self.is_speech = True
                 # Add padding from temp buffer
                 self.speech_buffer.extend(self.temp_buffer)
-                print(f"🎤 Speech started (prob={speech_prob:.2f})")
+                print(f"[VAD] Speech started (prob={speech_prob:.2f})")
             elif self.is_speech:
                 # Continue speech
                 self.speech_buffer.extend(audio_chunk)
@@ -115,7 +115,7 @@ class VadProcessor:
 
                 if self.silence_counter >= self.min_silence_samples:
                     # Speech ended
-                    print(f"🔇 Speech ended ({len(self.speech_buffer)/self.sample_rate:.2f}s)")
+                    print(f"[VAD] Speech ended ({len(self.speech_buffer)/self.sample_rate:.2f}s)")
                     speech_segment = np.array(self.speech_buffer, dtype=np.float32)
                     self.reset()
                     return True, speech_segment
@@ -128,6 +128,14 @@ class VadProcessor:
 
     def _silero_vad(self, audio_chunk: np.ndarray) -> float:
         """Run Silero VAD on audio chunk."""
+        # Silero expects exactly 512 samples for 16kHz
+        # If chunk size doesn't match, use energy-based VAD instead
+        required_samples = 512 if self.sample_rate == 16000 else 256
+
+        if len(audio_chunk) != required_samples:
+            # Fallback to energy VAD for variable chunk sizes
+            return self._energy_vad(audio_chunk)
+
         # Silero expects torch tensor
         audio_tensor = torch.from_numpy(audio_chunk).float()
 
@@ -138,10 +146,13 @@ class VadProcessor:
 
     def _energy_vad(self, audio_chunk: np.ndarray) -> float:
         """Simple energy-based VAD (fallback)."""
+        # Ensure audio is float32 and clamp to prevent overflow
+        audio_chunk = np.clip(audio_chunk.astype(np.float32), -1.0, 1.0)
+
         energy = np.sqrt(np.mean(audio_chunk ** 2))
         # Normalize to 0-1 range
-        # Threshold ~0.01 for 16-bit audio normalized to -1/+1
-        speech_prob = min(energy / 0.05, 1.0)
+        # Lower threshold for better sensitivity
+        speech_prob = min(energy / 0.01, 1.0)  # More sensitive
         return speech_prob
 
     def get_current_duration(self) -> float:
