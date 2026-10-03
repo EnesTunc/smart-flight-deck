@@ -548,7 +548,7 @@ async def get_sim_status(x_session_token: str = Header(...)):
         return SimStatus(
             connected=True,
             aircraft=state.aircraft_title or None,
-            flight_phase=None,  # TODO: Get from context engine
+            flight_phase=update_context_from_state(state),
             on_ground=state.on_ground,
 
             # Position
@@ -938,6 +938,29 @@ def get_context_engine():
         from logic import ContextEngine
         _context_engine = ContextEngine()
     return _context_engine
+
+
+def update_context_from_state(state) -> str:
+    """Feed the latest SimConnect state into the context engine.
+
+    Returns the detected flight phase name for the client.
+    """
+    ctx = get_context_engine()
+    ctx.update_from_simconnect(
+        altitude=state.altitude,
+        altitude_agl=state.altitude_agl,
+        speed=state.indicated_airspeed,
+        ground_speed=state.ground_speed,
+        vertical_speed=state.vertical_speed,
+        on_ground=state.on_ground,
+        gear_down=state.gear_handle_position == 1,
+        flaps_index=state.flaps_handle_index,
+        engine1_running=state.engine_running,
+        engine2_running=state.engine_running,
+        parking_brake=state.parking_brake,
+        aircraft_title=state.aircraft_title,
+    )
+    return ctx.phase.display_name
 
 
 @router.get("/context/status", response_model=ContextStatus)

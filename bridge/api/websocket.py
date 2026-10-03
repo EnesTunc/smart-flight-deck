@@ -93,7 +93,7 @@ async def websocket_endpoint(websocket: WebSocket, session_token: str):
 
 async def stream_sim_data(session_token: str):
     """Stream simulator data to client at regular intervals."""
-    from .routes import get_sim_connection, try_connect_sim
+    from .routes import get_sim_connection, try_connect_sim, update_context_from_state
 
     # Try initial connection
     sim = get_sim_connection()
@@ -120,7 +120,7 @@ async def stream_sim_data(session_token: str):
                         "sim_connected": True,
                         "on_ground": state.on_ground,
                         "aircraft": state.aircraft_title,
-                        "flight_phase": None,  # TODO: Get from context engine
+                        "flight_phase": update_context_from_state(state),
 
                         # Nested position data
                         "position": {
