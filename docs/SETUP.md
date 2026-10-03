@@ -17,7 +17,9 @@
 
 ## Installation
 
-### Option A: Pre-built Installer (Recommended)
+### Option A: Pre-built Installer
+
+> No pre-built release has been published yet. Use Option B for now.
 
 1. Download the latest release from [Releases](https://github.com/EnesTunc/smart-flight-deck/releases)
 2. Run `SmartFlightDeck_Setup.exe`
@@ -45,12 +47,10 @@ pip install -r requirements.txt
 #### 3. Download AI Models
 
 ```bash
-python scripts/download_models.py
+python scripts/download_tts_voices.py
 ```
 
-This downloads:
-- Whisper base.en (~140MB)
-- Piper TTS voice (~50MB)
+This downloads the Piper TTS voices. The Whisper speech recognition model is downloaded automatically on first run.
 
 #### 4. Run the Server
 
